@@ -4,7 +4,7 @@
 #include <cmath>
 #include <algorithm>
 #include <limits>
-
+#include <random>
 #include "Vec3.h"
 #include "Image.h"
 #include "Camera.h"
@@ -60,29 +60,43 @@ public:
         
         Material material = scene.material();
         LightSource lightSource = scene.lightsource();
+        Vec3f shadow(0.f, 0.f, 0.f);
         
         // Check that the point on the triangle is iluminated by light
-        Ray lightRay (trianglePoint,  lightSource.position() - trianglePoint);
+        // Cast a ray from a point on the triangle to the light source
+        Vec3f pointLightDirection = lightSource.randAreaPosition() - trianglePoint;
+        //cout << "position: " << lightSource.position() << endl;
+        //cout << "randArea: " << lightSource.randAreaPosition() << endl;
+        // if we are from the backside of the light source
+        //if (dot(-pointLightDirection, lightSource.normal()) < 0.f)
+        //    return shadow;
+        Ray lightRay (trianglePoint,  pointLightDirection);
         float ut,vt,dt;
         size_t newTriangleIndex, newMeshIndex;
-        
+        // If the ray intersects other triangles, return shadow
         if (rayTrace (lightRay, scene, newMeshIndex, newTriangleIndex, ut, vt, dt))
-        return Vec3f(0.f, 0.f, 0.f);
+            return shadow;
         
          
         
-        bsdf = material.evaluateColorResponse(hitNormal, trianglePoint-lightSource.position() );
+        bsdf = material.evaluateColorResponse(hitNormal, pointLightDirection );
         radiance = lightSource.evaluateLight(trianglePoint);
-        //cout << bsdf << endl;
-		// No shading so far, only normal visualization
-        return Vec3f(0.5f, 0.5f, 0.5f) + bsdf*radiance;//Vec3f(0.5f, 0.5f, 0.5f) + hitNormal / 2.f;
+        //cout <<"bsdf: " << bsdf << endl;
+        //cout <<"radiance: " << bsdf << endl;
+        //cout <<"radiance*bsdf: " <<Vec3f(0.5f, 0.5f, 0.5f) + radiance*bsdf << endl;
+		
+        return Vec3f(0.5f, 0.5f, 0.5f) + radiance*bsdf;//Vec3f(0.5f, 0.5f, 0.5f) + hitNormal / 2.f;
 	}
 
 
 	inline void render (const Scene& scene, Image& image) {
+        
 		size_t w = image.width();
 		size_t h = image.height();
 		const Camera& camera = scene.camera();
+        
+        uniform_real_distribution<float> dis(0.f,1.f);
+        
 		for (int y = 0; y < h; y++) {
 			static int progress = 0;
 			progress++;
@@ -90,15 +104,34 @@ public:
 				std::cout << ".";
 #pragma omp parallel for
 			for (int x = 0; x < w; x++) {
-				Vec3f colorResponse;
-				Ray ray = camera.rayAt (float (x) / w, 1.f - float (y) / h);
+                // Trace N rays per pixel in ramdom directions to get rid of aliasing
+                int N = 8, counter = 0;
+                float shiftX, shiftY, eps = 1e-5;
+                Vec3f colorResponse(0.f, 0.f, 0.f);
+                for (int i = 0; i < N; i++){
+                        shiftX = dis(gen);
+                        shiftY = dis(gen);
+                        Ray ray = camera.rayAt ((x + shiftX) / w, 1.f - (y + shiftY) / h);
+                    
+                        size_t meshIndex, triangleIndex;
+                        float u, v, d;
+                    bool intersectionFound = rayTrace (ray, scene, meshIndex, triangleIndex, u, v, d);
+                    if (intersectionFound && d > 0.f){
+                         colorResponse += shade (scene, meshIndex, triangleIndex, u, v);
+                         counter++;
+                    }
+                }
+                //cout << x << " " << y << endl;
+                //cout << "colorResponse: " << colorResponse / float(N)<< endl;
+                //cout << "image (x,y): "  << image (x,y) * ((N - counter)  / float(N)) << endl;
+                image (x,y) = colorResponse  / float(N) +
+                              image (x,y) * ((N - counter)  / float(N));
                 
-				size_t meshIndex, triangleIndex;
-				float u, v, d;
-				bool intersectionFound = rayTrace (ray, scene, meshIndex, triangleIndex, u, v, d);
-				if (intersectionFound && d > 0.f)
-					image (x,y) = shade (scene, meshIndex, triangleIndex, u, v);
 			}
 		}
 	}
+    
+
+    
+        
 };

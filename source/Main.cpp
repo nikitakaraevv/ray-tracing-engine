@@ -47,9 +47,17 @@ int main (int argc, char ** argv) {
 
 	scene.camera() = camera;
 	
-    LightSource lightsource(Vec3f(0.f, 2.f, 2.f),
+    //LightSource lightsource(Vec3f(0.f, 2.f, 2.f),
+    //                        Vec3f(1.f, 1.f, 1.f),
+    //                        0.9f);
+    
+    LightSource lightsource(Vec3f(0.3f, 2.f, 2.f),
                             Vec3f(1.f, 1.f, 1.f),
-                            0.9f);
+                            Vec3f(0.f, 0.f, 0.f),
+                            0.9f,
+                            0.2f);
+    
+    
     Material material;
     
     scene.lightsource() = lightsource;
