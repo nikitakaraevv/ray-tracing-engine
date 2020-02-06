@@ -48,7 +48,8 @@ public:
     
     inline Vec3f evaluateLight (const Vec3f &point) {
         float d = dist(point, m_position);
-        return m_color * fmin(1., m_intensity / (ac + al * d + aq * d*d));
+        cout << "dist: " << d << endl;
+        return 0.3f * m_color  + Vec3f(1.f, 1.f, 1.f) * fmin(0.7f, m_intensity / (ac + al * d + aq * d*d));
     }
 private:
 	Vec3f m_position,

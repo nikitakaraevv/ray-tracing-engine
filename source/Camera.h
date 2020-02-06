@@ -29,6 +29,8 @@ public:
 	Ray rayAt (float u, float v) const {
 		return Ray (m_position, normalize (m_lowerLeftCorner + u * m_horizontal + v * m_vertical - m_position));
 	}
+    
+    inline const Vec3f& position() const { return m_position; }
 
 private:
 	float m_verticalFoV;

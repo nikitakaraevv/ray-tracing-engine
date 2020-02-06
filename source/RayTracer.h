@@ -53,6 +53,7 @@ public:
 		const auto& mesh = scene.meshes()[meshIndex];
 		const auto& P = mesh.vertexPositions();
 		const auto& N = mesh.vertexNormals();
+        const Camera& camera = scene.camera();
 		const Vec3i& triangle = mesh.indexedTriangles()[triangleIndex];
 		Vec3f hitNormal = normalize((1.f - u - v) * N[triangle[0]] + u * N[triangle[1]] + v * N[triangle[2]]),
         trianglePoint = normalize((1.f - u - v) * P[triangle[0]] + u * P[triangle[1]] + v * P[triangle[2]]),
@@ -64,7 +65,8 @@ public:
         
         // Check that the point on the triangle is iluminated by light
         // Cast a ray from a point on the triangle to the light source
-        Vec3f pointLightDirection = lightSource.randAreaPosition() - trianglePoint;
+        Vec3f pointLightDirection = lightSource.randAreaPosition() - trianglePoint,
+              pointCameraDirection = camera.position() - trianglePoint;
         //cout << "position: " << lightSource.position() << endl;
         //cout << "randArea: " << lightSource.randAreaPosition() << endl;
         // if we are from the backside of the light source
@@ -79,13 +81,14 @@ public:
         
          
         
-        bsdf = material.evaluateColorResponse(hitNormal, pointLightDirection );
+        bsdf = material.evaluateColorResponse(hitNormal, pointLightDirection, pointCameraDirection);
         radiance = lightSource.evaluateLight(trianglePoint);
         //cout <<"bsdf: " << bsdf << endl;
-        //cout <<"radiance: " << bsdf << endl;
-        //cout <<"radiance*bsdf: " <<Vec3f(0.5f, 0.5f, 0.5f) + radiance*bsdf << endl;
+        cout <<"bsdf: " << bsdf << endl;
+        cout <<"radiance: " <<  radiance << endl;
+        cout <<"radiance*bsdf: " <<  radiance * bsdf << endl;
 		
-        return Vec3f(0.5f, 0.5f, 0.5f) + radiance*bsdf;//Vec3f(0.5f, 0.5f, 0.5f) + hitNormal / 2.f;
+        return radiance * bsdf;//Vec3f(0.5f, 0.5f, 0.5f) + hitNormal / 2.f;
 	}
 
 
@@ -105,7 +108,7 @@ public:
 #pragma omp parallel for
 			for (int x = 0; x < w; x++) {
                 // Trace N rays per pixel in ramdom directions to get rid of aliasing
-                int N = 8, counter = 0;
+                int N = 6, counter = 0;
                 float shiftX, shiftY, eps = 1e-5;
                 Vec3f colorResponse(0.f, 0.f, 0.f);
                 for (int i = 0; i < N; i++){

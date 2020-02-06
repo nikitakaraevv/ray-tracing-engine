@@ -39,7 +39,7 @@ int main (int argc, char ** argv) {
 	Image image (args.width (), args.height ());
 	Scene scene;
 	
-	Camera camera(Vec3f(0.f, 0.f, 1.f),
+	Camera camera(Vec3f(0.2f, 0.2f, 1.2f),
 				  Vec3f(),
 				  Vec3f(0.f, 1.f, 0.f),
 				  60.f,
@@ -51,8 +51,8 @@ int main (int argc, char ** argv) {
     //                        Vec3f(1.f, 1.f, 1.f),
     //                        0.9f);
     
-    LightSource lightsource(Vec3f(0.3f, 2.f, 2.f),
-                            Vec3f(1.f, 1.f, 1.f),
+    LightSource lightsource(Vec3f(0.3f, 1.f, 1.f),
+                            Vec3f(1.f, 1.f, 0.3f),
                             Vec3f(0.f, 0.f, 0.f),
                             0.9f,
                             0.2f);
