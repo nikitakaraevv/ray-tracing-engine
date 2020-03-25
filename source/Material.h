@@ -9,12 +9,13 @@ public:
         m_kd = M_PI;
         m_albedo = Vec3f(0.9f, 0.4f, 0.4f);
         m_alpha = 0.5f;
-        m_F0 = Vec3f(1.0f, 0.86f, 0.57f);
+        m_F0 = Vec3f(0.31f, 0.31f, 0.31f); //glass;  gold: Vec3f(1.0f, 0.86f, 0.57f);
     }
-    inline Material (float kd, float alpha, const Vec3f& albedo) {
+    inline Material (float kd, float alpha, const Vec3f& albedo, const Vec3f& F0) {
         m_kd = kd;
         m_albedo = albedo;
         m_alpha = alpha;
+        m_F0 = F0;
     }
 	virtual ~Material() {}
 
@@ -23,8 +24,8 @@ public:
         Vec3f wh = wi + wo;
         wh = normalize(wh);
         // Distribution
-        float D = m_alpha*m_alpha /
-                  (M_PI * pow(1 + (m_alpha*m_alpha - 1) * pow(dot(normal, wh), 2), 2));
+        float D = m_alpha * m_alpha /
+                  (M_PI * pow(1 + (m_alpha * m_alpha - 1) * pow(dot(normal, wh), 2), 2));
         //float n_dot_wi = dot(normal, wi);
         
        

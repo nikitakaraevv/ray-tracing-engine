@@ -9,12 +9,15 @@ public:
 	inline CommandLine () :
 		m_width(480),
 		m_height(270),
+        m_numRays(6),
 		m_outputFilename("output.ppm") {}
 	virtual ~CommandLine() {}
 
 	inline size_t width() const { return m_width; }
 
 	inline size_t height() const { return m_height; }
+    
+    inline size_t numRays() const { return m_numRays; }
 
 	inline const std::string& outputFilename() const { return m_outputFilename; }
 
@@ -43,6 +46,9 @@ public:
 			else if (argi == "-o" || argi == "-output") {
 				m_outputFilename = std::string(argv[++i]);
 			}
+            else if (argi == "-N" || argi == "-numRays") {
+                m_numRays = std::atoi(argv[++i]);
+            }
 			else {
 				throw std::runtime_error(std::string("Unknown argument <" + std::string(argi) + ">").c_str());
 			}
@@ -50,7 +56,8 @@ public:
 	}
 
 private:
-	size_t m_width;
-	size_t m_height;
+	size_t m_width,
+	 m_height,
+     m_numRays;
 	std::string m_outputFilename;
 };

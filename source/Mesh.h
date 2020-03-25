@@ -6,6 +6,7 @@
 #include <string>
 #include <exception>
 
+#include "Material.h"
 #include "Vec3.h"
 
 typedef Vec3i Triangle;
@@ -23,6 +24,10 @@ public:
 	const std::vector<Triangle>& indexedTriangles() const { return m_indexedTriangles; }
 
 	std::vector<Triangle>& indexedTriangles() { return m_indexedTriangles; }
+    
+    inline const Material& material() const { return m_material; }
+    
+    inline Material& material() { return m_material; }
 
 	void recomputeNormals() {
 		auto& N = vertexNormals();
@@ -94,4 +99,5 @@ private:
 	std::vector<Vec3f> m_vertexPositions;
 	std::vector<Vec3f> m_vertexNormals;
 	std::vector<Triangle> m_indexedTriangles;
+    Material m_material;
 };

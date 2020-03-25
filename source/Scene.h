@@ -5,7 +5,6 @@
 #include "Camera.h"
 #include "Mesh.h"
 #include "LightSource.h"
-#include "Material.h"
 
 class Scene {
 public:
@@ -16,13 +15,9 @@ public:
 
 	inline Camera& camera() { return m_camera; }
     
-    inline const LightSource& lightsource() const { return m_lightsource; }
+    inline const std::vector<LightSource> & lightsources () const { return m_lightsources;  }
     
-    inline LightSource& lightsource() { return m_lightsource; }
-    
-    inline const Material& material() const { return m_material; }
-    
-    inline Material& material() { return m_material; }
+    inline std::vector<LightSource> & lightsources () { return m_lightsources; }
 	
 	inline const std::vector<Mesh> & meshes () const { return m_meshes;  }
 	
@@ -30,8 +25,7 @@ public:
 
 private:
 	Camera m_camera;
-    LightSource m_lightsource;
-    Material m_material;
+    std::vector<LightSource> m_lightsources;
 	std::vector<Mesh> m_meshes;
     
 };

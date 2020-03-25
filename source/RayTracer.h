@@ -14,7 +14,9 @@ using namespace std;
 
 class RayTracer {
 public:
-	RayTracer () {}
+	RayTracer (int numRays) {
+        m_numRays = numRays;
+    }
 	virtual ~RayTracer() {}
 	   
 	inline bool rayTrace (const Ray & ray, 
@@ -59,36 +61,37 @@ public:
         trianglePoint = normalize((1.f - u - v) * P[triangle[0]] + u * P[triangle[1]] + v * P[triangle[2]]),
         radiance, bsdf;
         
-        Material material = scene.material();
-        LightSource lightSource = scene.lightsource();
-        Vec3f shadow(0.f, 0.f, 0.f);
-        
-        // Check that the point on the triangle is iluminated by light
-        // Cast a ray from a point on the triangle to the light source
-        Vec3f pointLightDirection = lightSource.randAreaPosition() - trianglePoint,
+        Material material = mesh.material();
+        Vec3f colorResponse(0.f,0.f,0.f),
               pointCameraDirection = camera.position() - trianglePoint;
-        //cout << "position: " << lightSource.position() << endl;
-        //cout << "randArea: " << lightSource.randAreaPosition() << endl;
-        // if we are from the backside of the light source
-        //if (dot(-pointLightDirection, lightSource.normal()) < 0.f)
-        //    return shadow;
-        Ray lightRay (trianglePoint,  pointLightDirection);
-        float ut,vt,dt;
-        size_t newTriangleIndex, newMeshIndex;
-        // If the ray intersects other triangles, return shadow
-        if (rayTrace (lightRay, scene, newMeshIndex, newTriangleIndex, ut, vt, dt))
-            return shadow;
+        for (LightSource lightSource : scene.lightsources()) {
+            // Check that the point on the triangle is iluminated by light
+            // Cast a ray from a point on the triangle to the light source
+            Vec3f pointLightDirection = lightSource.randAreaPosition() - trianglePoint;
+                  
+            //cout << "position: " << lightSource.position() << endl;
+            //cout << "randArea: " << lightSource.randAreaPosition() << endl;
+            // if we are from the backside of the light source
+            Ray lightRay (trianglePoint,  pointLightDirection);
+            float ut,vt,dt;
+            size_t newTriangleIndex, newMeshIndex;
+            // If the ray intersects other triangles, return shadow
+            if (rayTrace (lightRay, scene, newMeshIndex, newTriangleIndex, ut, vt, dt))
+                continue;
+            
+            bsdf = material.evaluateColorResponse(hitNormal, pointLightDirection, pointCameraDirection);
+            radiance = lightSource.evaluateLight(trianglePoint);
+            colorResponse += radiance * bsdf;
+
+            //cout <<"bsdf: " << bsdf << endl;
+            //cout <<"bsdf: " << bsdf << endl;
+            //cout <<"radiance: " <<  radiance << endl;
+            //cout <<"radiance*bsdf: " <<  radiance * bsdf << endl;
+        }
+        // check that all the values are less than one
+        for (int i = 0; i < 3; i++) colorResponse[i] = fmin(colorResponse[i], 1.f);
         
-         
-        
-        bsdf = material.evaluateColorResponse(hitNormal, pointLightDirection, pointCameraDirection);
-        radiance = lightSource.evaluateLight(trianglePoint);
-        //cout <<"bsdf: " << bsdf << endl;
-        cout <<"bsdf: " << bsdf << endl;
-        cout <<"radiance: " <<  radiance << endl;
-        cout <<"radiance*bsdf: " <<  radiance * bsdf << endl;
-		
-        return radiance * bsdf;//Vec3f(0.5f, 0.5f, 0.5f) + hitNormal / 2.f;
+        return colorResponse;//Vec3f(0.5f, 0.5f, 0.5f) + hitNormal / 2.f;
 	}
 
 
@@ -105,13 +108,14 @@ public:
 			progress++;
 			if (progress % 10 == 0)
 				std::cout << ".";
-#pragma omp parallel for
+            #pragma omp parallel for
 			for (int x = 0; x < w; x++) {
-                // Trace N rays per pixel in ramdom directions to get rid of aliasing
-                int N = 6, counter = 0;
+                // Trace m_numRays rays per pixel in random directions to get rid of aliasing
+                int counter = 0;
                 float shiftX, shiftY, eps = 1e-5;
                 Vec3f colorResponse(0.f, 0.f, 0.f);
-                for (int i = 0; i < N; i++){
+                #pragma omp parallel for
+                for (int i = 0; i < m_numRays; i++){
                         shiftX = dis(gen);
                         shiftY = dis(gen);
                         Ray ray = camera.rayAt ((x + shiftX) / w, 1.f - (y + shiftY) / h);
@@ -127,14 +131,13 @@ public:
                 //cout << x << " " << y << endl;
                 //cout << "colorResponse: " << colorResponse / float(N)<< endl;
                 //cout << "image (x,y): "  << image (x,y) * ((N - counter)  / float(N)) << endl;
-                image (x,y) = colorResponse  / float(N) +
-                              image (x,y) * ((N - counter)  / float(N));
+                image (x,y) = colorResponse  / float(m_numRays) +
+                              image (x,y) * ((m_numRays - counter)  / float(m_numRays));
                 
 			}
 		}
 	}
     
-
-    
-        
+private:
+    int m_numRays;
 };

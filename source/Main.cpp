@@ -21,7 +21,21 @@
 
 using namespace std;
 
-
+void createPlane(Mesh &mesh, vector<Vec3f> corners, Vec3f normal){
+    int numVerts = mesh.vertexPositions().size();
+    mesh.vertexPositions().insert( mesh.vertexPositions().end(),
+                               {corners[0],
+                                corners[1],
+                                corners[2],
+                                corners[3]});
+    mesh.vertexNormals().insert( mesh.vertexNormals().end(),
+                                {normal,
+                                 normal,
+                                 normal,
+                                 normal});
+    mesh.indexedTriangles().push_back(Vec3i(numVerts,numVerts+1, numVerts+3));
+    mesh.indexedTriangles().push_back(Vec3i(numVerts,numVerts+2, numVerts+3));
+}
 
 int main (int argc, char ** argv) {
 	CommandLine args;
@@ -39,7 +53,7 @@ int main (int argc, char ** argv) {
 	Image image (args.width (), args.height ());
 	Scene scene;
 	
-	Camera camera(Vec3f(0.2f, 0.2f, 1.2f),
+	Camera camera(Vec3f(0.3f, 0.2f, 2.3f),
 				  Vec3f(),
 				  Vec3f(0.f, 1.f, 0.f),
 				  60.f,
@@ -51,47 +65,86 @@ int main (int argc, char ** argv) {
     //                        Vec3f(1.f, 1.f, 1.f),
     //                        0.9f);
     
-    LightSource lightsource(Vec3f(0.3f, 1.f, 1.f),
-                            Vec3f(1.f, 1.f, 0.3f),
-                            Vec3f(0.f, 0.f, 0.f),
-                            0.9f,
-                            0.2f);
+    LightSource lightsource_square(Vec3f(0.3f, 1.f, 1.1f),  // position
+                            Vec3f(1.f, 1.f, 1.f),  // color
+                            Vec3f(0.f, 0.3f, 0.f),  // direction
+                            0.9f,                   // intensity
+                            0.5f),                  // sideLength
+    
+    lightsource_point(Vec3f(1.3f, 1.f, 0.f),  // position
+                        Vec3f(1.f, 1.f, 1.f),  // color
+                        Vec3f(0.f, 0.f, 0.f),  // direction
+                        0.9f,                   // intensity
+                        0.001f);                 // sideLength
     
     
-    Material material;
     
-    scene.lightsource() = lightsource;
-    scene.material() = material;
+    // define lightsources
+    scene.lightsources().push_back (lightsource_square);
+    scene.lightsources().push_back (lightsource_point);
     
-	// Loading a mesh
-	Mesh mesh;
+    // define materials
+    float kd = M_PI, // diffusion coeff
+          // alpha coeff
+          cube_alpha = 0.9f,
+          walls_alpha = 0.2f,
+          head_alpha = 0.5f;
+    // albedo
+    Vec3f cube_albedo(0.4f, 0.4f, 0.9f),
+          walls_albedo(0.9f, 0.4f, 0.4f),
+          head_albedo(0.9f, 0.9f, 0.9f);
+    // Fresnel term
+    Vec3f head_F0(1.0f, 0.86f, 0.57f), // gold
+          cube_F0(0.31f, 0.31f, 0.31f), // glass
+          walls_F0(1.f,1.f,1.f);
+    
+	Material material_walls(kd, walls_alpha, walls_albedo, walls_F0),
+             material_head(kd, head_alpha, head_albedo, head_F0),
+             material_cube(kd, cube_alpha, cube_albedo, cube_F0);
+    
+	Mesh mesh_head, mesh_walls, mesh_cube;
+    mesh_head.material() = material_head;
+    mesh_walls.material() = material_walls;
+    mesh_cube.material() = material_cube;
+    
+    // Loading meshes
 	try {
-		mesh.loadOFF("../example.off");
+		mesh_head.loadOFF("../meshes/example_low_res.off");
+        mesh_cube.loadOFF("../meshes/cube_tri.off");
 	}
 	catch (const std::exception & e) {
 		std::cerr << e.what() << std::endl;
 		exit(1);
 	}
-    
+    float box_size = 1.5f;
     // Creating the ground
-    int numVerts = mesh.vertexPositions().size();
-    mesh.vertexPositions().insert( mesh.vertexPositions().end(),
-                               {Vec3f(10.f,-1.5f,10.f),
-                                Vec3f(10.f,-1.5f,-10.f),
-                                Vec3f(-10.f,-1.5f,10.f),
-                                Vec3f(-10.f,-1.5f,-10.f)});
-    mesh.vertexNormals().insert( mesh.vertexNormals().end(),
-                                {Vec3f(0.f,1.f,0.f),
-                                 Vec3f(0.f,1.f,0.f),
-                                 Vec3f(0.f,1.f,0.f),
-                                 Vec3f(0.f,1.f,0.f)});
-    mesh.indexedTriangles().push_back(Vec3i(numVerts,numVerts+1, numVerts+3));
-	mesh.indexedTriangles().push_back(Vec3i(numVerts,numVerts+2, numVerts+3));
+    vector<Vec3f> corners = {
+        Vec3f(box_size,-1.f,box_size),
+        Vec3f(box_size,-1.f,-box_size),
+        Vec3f(-box_size,-1.f,box_size),
+        Vec3f(-box_size,-1.f,-box_size)
+    };
     
-    scene.meshes ().push_back (mesh);
+    Vec3f normal(0.f,1.f,0.f);
+    createPlane(mesh_walls,  corners,  normal);
+    
+    // Creating the back wall
+    corners = {
+        Vec3f(-box_size,-1.f,-box_size),
+        Vec3f(box_size,-1.f,-box_size),
+        Vec3f(-box_size,1.25f,-box_size),
+        Vec3f(box_size,1.25f,-box_size)
+    };
+    
+    Vec3f normal2(0.f,0.f,1.f);
+    createPlane(mesh_walls,  corners,  normal2);
+    
+    scene.meshes ().push_back (mesh_walls);
+    scene.meshes ().push_back (mesh_head);
+    scene.meshes ().push_back (mesh_cube);
 
 
-	RayTracer rayTracer;
+	RayTracer rayTracer(args.numRays ());
 
 	// Rendering
 	
