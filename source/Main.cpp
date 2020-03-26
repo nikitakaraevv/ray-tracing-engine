@@ -18,6 +18,8 @@
 #include "RayTracer.h"
 #include "Material.h"
 #include "LightSource.h"
+#include <chrono>
+
 
 using namespace std;
 
@@ -48,8 +50,9 @@ int main (int argc, char ** argv) {
 			exit(1);
 		}
 	}
+    chrono::steady_clock::time_point begin = chrono::steady_clock::now();
 	// Initialization
-
+    
 	Image image (args.width (), args.height ());
 	Scene scene;
 	
@@ -68,27 +71,34 @@ int main (int argc, char ** argv) {
     LightSource lightsource_square(Vec3f(0.3f, 1.f, 1.1f),  // position
                             Vec3f(1.f, 1.f, 1.f),  // color
                             Vec3f(0.f, 0.3f, 0.f),  // direction
-                            0.9f,                   // intensity
+                            1.f,                   // intensity
                             0.5f),                  // sideLength
     
     lightsource_point(Vec3f(1.3f, 1.f, 0.f),  // position
                         Vec3f(1.f, 1.f, 1.f),  // color
                         Vec3f(0.f, 0.f, 0.f),  // direction
-                        0.9f,                   // intensity
-                        0.001f);                 // sideLength
+                        1.f,                   // intensity
+                        0.001f),                 // sideLength
+    
+    lightsource_point2(Vec3f(-1.3f, 2.f, 1.f),  // position
+                        Vec3f(1.f, 1.f, 1.f),  // color
+                        Vec3f(0.f, 0.f, 0.f),  // direction
+                        0.7f,                   // intensity
+                        0.01f);                 // sideLength
     
     
     
     // define lightsources
     scene.lightsources().push_back (lightsource_square);
     scene.lightsources().push_back (lightsource_point);
+    scene.lightsources().push_back (lightsource_point2);
     
     // define materials
     float kd = M_PI, // diffusion coeff
           // alpha coeff
           cube_alpha = 0.9f,
           walls_alpha = 0.2f,
-          head_alpha = 0.5f;
+          head_alpha = 0.8f;
     // albedo
     Vec3f cube_albedo(0.4f, 0.4f, 0.9f),
           walls_albedo(0.9f, 0.4f, 0.4f),
@@ -109,13 +119,14 @@ int main (int argc, char ** argv) {
     
     // Loading meshes
 	try {
-		mesh_head.loadOFF("../meshes/example_low_res.off");
+		mesh_head.loadOFF("../meshes/example.off");
         mesh_cube.loadOFF("../meshes/cube_tri.off");
 	}
 	catch (const std::exception & e) {
 		std::cerr << e.what() << std::endl;
 		exit(1);
 	}
+    
     float box_size = 1.5f;
     // Creating the ground
     vector<Vec3f> corners = {
@@ -139,20 +150,36 @@ int main (int argc, char ** argv) {
     Vec3f normal2(0.f,0.f,1.f);
     createPlane(mesh_walls,  corners,  normal2);
     
+    
+    mesh_walls.computeBVH();
+    mesh_head.computeBVH();
+    mesh_cube.computeBVH();
+    
+    
     scene.meshes ().push_back (mesh_walls);
-    scene.meshes ().push_back (mesh_head);
+    //scene.meshes ().push_back (mesh_head);
     scene.meshes ().push_back (mesh_cube);
-
-
+    
+    std::cout << "RayTracer creation: starts";
 	RayTracer rayTracer(args.numRays ());
-
+    std::cout << ".....ends." << std::endl;
+    
 	// Rendering
-	
+	std::cout << "Background filling: starts";
 	image.fillBackground ();
-	std::cout << "Ray tracing: starts";
+    std::cout << ".....ends." << std::endl;
+
+    //std::cout << "Ray tracing: starts";
 	rayTracer.render (scene, image);
-	std::cout << "ends." << std::endl;
+	//std::cout << "ends." << std::endl;
+    
+    
+    
 	image.savePPM (args.outputFilename ());
+    chrono::steady_clock::time_point end = chrono::steady_clock::now();
+    std::cout << "Total time is " << std::chrono::duration_cast<std::chrono::seconds>(end - begin).count() << "[s]" << std::endl;
+    
+    
 	
 
 	return 0;

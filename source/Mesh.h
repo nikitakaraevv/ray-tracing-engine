@@ -8,11 +8,18 @@
 
 #include "Material.h"
 #include "Vec3.h"
+#include "AABB.h"
+#include "BVH.h"
 
 typedef Vec3i Triangle;
 // A simple container for mesh data
 class Mesh {
 public:
+    Mesh() {
+            m_aabb = AABB();
+            m_bvh = BVH();
+            }
+    
 	const std::vector<Vec3f>& vertexPositions() const { return m_vertexPositions; }
 
 	std::vector<Vec3f>& vertexPositions() { return m_vertexPositions; }
@@ -28,6 +35,9 @@ public:
     inline const Material& material() const { return m_material; }
     
     inline Material& material() { return m_material; }
+    
+    inline const BVH& bvh() const { return m_bvh; }
+    
 
 	void recomputeNormals() {
 		auto& N = vertexNormals();
@@ -77,6 +87,28 @@ public:
 		}
 		recomputeNormals();
 	}
+    
+    void computeAABB() {
+        float eps = 1e-3;
+        Vec3f minCorner(m_vertexPositions[0] - __FLT_EPSILON__ * 2 * Vec3f(1, 1, 1)),
+        maxCorner(m_vertexPositions[0] + __FLT_EPSILON__ * 2 * Vec3f(1, 1, 1));
+        for (const Vec3f &vertex: m_vertexPositions) {
+            for (int i=0; i<3; i++) {
+                minCorner[i] = fmin(minCorner[i], vertex[i] - __FLT_EPSILON__ * 2 );
+                maxCorner[i] = fmax(maxCorner[i], vertex[i] + __FLT_EPSILON__ * 2 );
+            }
+        }
+        m_aabb.minCorner() = minCorner;
+        m_aabb.maxCorner() = maxCorner;
+    }
+
+    void computeBVH() {
+        computeAABB();
+        m_bvh.m_aabb = m_aabb;
+        for (int t_idx=0; t_idx < m_indexedTriangles.size(); t_idx++)
+            m_bvh.m_triangles.push_back(t_idx);
+        m_bvh.from_triangles(m_bvh.m_triangles.begin(), m_bvh.m_triangles.end(), m_vertexPositions, m_indexedTriangles);
+    }
 
 private:
 	Vec3f triangleNormal(size_t i) const {
@@ -100,4 +132,6 @@ private:
 	std::vector<Vec3f> m_vertexNormals;
 	std::vector<Triangle> m_indexedTriangles;
     Material m_material;
+    AABB m_aabb;
+    BVH m_bvh;
 };
