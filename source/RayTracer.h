@@ -22,6 +22,13 @@ void printProgressBar(float prop) {
     std::cout << "Raytracing... [" << progressBar << string(50 - progress, ' ') << "] " << progress * 2 << "%\r" << flush;
 }
 
+float stratifiedSample1D(int sampleIdx, int nSamples, float left, float right) {
+    uniform_real_distribution<> dis(left, right);
+    float invNSamples = (right-left) / nSamples,
+    delta = 0.5f;
+    return left + (sampleIdx + delta * dis(gen)) * invNSamples;
+}
+
 class RayTracer {
 public:
 	RayTracer (int numRays) {
@@ -105,47 +112,100 @@ public:
     }
     
 
-	inline Vec3f shade (const Scene & scene, size_t meshIndex, Vec3i& triangle, float u, float v) {
+	inline Vec3f calculateColorRay (const Scene & scene, Ray ray, bool & posIntersectionFound) {
+        size_t meshIndex;
+        Vec3i triangle;
+        Vec3f colorResponse(0.f,0.f,0.f);
+        float w, u, v, d;
+        bool intersectionFound = rayTrace (ray, scene, meshIndex, triangle, u, v, d);
+        
+        if (not (intersectionFound && d > 0.f)){
+            posIntersectionFound = false;
+            return colorResponse;
+        }
+        w = 1.f - u - v;
 		const auto& mesh = scene.meshes()[meshIndex];
 		const auto& P = mesh.vertexPositions();
 		const auto& N = mesh.vertexNormals();
         const Camera& camera = scene.camera();
 		//const Vec3i& triangle = mesh.indexedTriangles()[triangleIndex];
-		Vec3f hitNormal = normalize((1.f - u - v) * N[triangle[0]] + u * N[triangle[1]] + v * N[triangle[2]]),
-        trianglePoint = normalize((1.f - u - v) * P[triangle[0]] + u * P[triangle[1]] + v * P[triangle[2]]),
+		Vec3f hitNormal = normalize(w * N[triangle[0]] + u * N[triangle[1]] + v * N[triangle[2]]),
+        trianglePoint = normalize(w * P[triangle[0]] + u * P[triangle[1]] + v * P[triangle[2]]),
         radiance, bsdf;
-        Vec3f intersection_position(trianglePoint + 2 * __FLT_EPSILON__ * hitNormal);
+        
         Material material = mesh.material();
-        Vec3f colorResponse(0.f,0.f,0.f),
-              pointCameraDirection = camera.position() - trianglePoint;
+        Vec3f pointCameraDirection = camera.position() - trianglePoint;
         for (LightSource lightSource : scene.lightsources()) {
             // Check that the point on the triangle is iluminated by light
             // Cast a ray from a point on the triangle to the light source
             Vec3f pointLightDirection = lightSource.randAreaPosition() - trianglePoint;
-                  
             Ray lightRay (trianglePoint,  pointLightDirection);
-            float ut,vt,dt;
-            size_t  newMeshIndex;
-            Vec3i newTriangle;
-            
-            if (rayTrace (lightRay, scene, newMeshIndex, newTriangle, ut, vt, dt))
+            if (rayTrace (lightRay, scene, meshIndex, triangle, u, v, d))
                 continue;
             bsdf = material.evaluateColorResponse(hitNormal, pointLightDirection, pointCameraDirection);
             radiance = lightSource.evaluateLight(trianglePoint);
             colorResponse += radiance * bsdf;
-
-            //cout <<"bsdf: " << bsdf << endl;
-            //cout <<"bsdf: " << bsdf << endl;
-            //cout <<"radiance: " <<  radiance << endl;
-            //cout <<"radiance*bsdf: " <<  radiance * bsdf << endl;
         }
         // check that all the values are less than one
-        for (int i = 0; i < 3; i++) colorResponse[i] = fmax(fmin(colorResponse[i], 1.f),0.f);
-        
-        return colorResponse;//Vec3f(0.5f, 0.5f, 0.5f) + hitNormal / 2.f;
+        //for (int i = 0; i < 3; i++) colorResponse[i] = fmax(fmin(colorResponse[i], 1.f),0.f);
+        return colorResponse;
 	}
     
+
+    inline Vec3f calculateColorPath (const Scene & scene, Ray ray, bool & posIntersectionFound, int depth, const int finalDepth, Vec3i sampleIds) {
+        size_t meshIndex;
+        Vec3i triangle;
+        Vec3f colorResponse(0.f,0.f,0.f);
+        if (depth >= finalDepth)
+            return colorResponse;
+        
+        float w, u, v, d;
+        bool intersectionFound = rayTrace (ray, scene, meshIndex, triangle, u, v, d);
+        
+        if (not (intersectionFound && d > 0.f)){
+            if (depth==0) posIntersectionFound = false;
+            return colorResponse;
+        }
+        w = 1.f - u - v;
+        const auto& mesh = scene.meshes()[meshIndex];
+        const auto& P = mesh.vertexPositions();
+        const auto& N = mesh.vertexNormals();
+        const Camera& camera = scene.camera();
+        //const Vec3i& triangle = mesh.indexedTriangles()[triangleIndex];
+        Vec3f hitNormal = normalize(w * N[triangle[0]] + u * N[triangle[1]] + v * N[triangle[2]]),
+        trianglePoint = normalize(w * P[triangle[0]] + u * P[triangle[1]] + v * P[triangle[2]]),
+        radiance, bsdf;
+        
+        Material material = mesh.material();
+        Vec3f pointCameraDirection = camera.position() - trianglePoint;
+        for (LightSource lightSource : scene.lightsources()) {
+            // Check that the point on the triangle is iluminated by light
+            // Cast a ray from a point on the triangle to the light source
+            Vec3f pointLightDirection = lightSource.randAreaPosition() - trianglePoint;
+            Ray lightRay (trianglePoint,  pointLightDirection);
+            if (rayTrace (lightRay, scene, meshIndex, triangle, u, v, d))
+                continue;
+            bsdf = material.evaluateColorResponse(hitNormal, pointLightDirection, pointCameraDirection);
+            radiance = lightSource.evaluateLight(trianglePoint);
+            colorResponse += radiance * bsdf;
+        }
+        // check that all the values are less than one
+        
+        uniform_real_distribution<float> dis(-1.f,1.f);
+        Vec3f randomDirection(stratifiedSample1D(sampleIds[0], m_numRays, -1.f, 1.f),
+                              stratifiedSample1D(sampleIds[1], m_numRays, -1.f, 1.f),
+                              stratifiedSample1D(sampleIds[2], m_numRays, -1.f, 1.f));
+        
+        Ray nextRay(trianglePoint, randomDirection);
+        
+        return colorResponse + calculateColorPath(scene, nextRay, posIntersectionFound, depth+1, finalDepth, sampleIds);
+    }
     
+    inline Vec3f normalizeColor(Vec3f colorResponse) {
+        for (int i = 0; i < 3; i++)
+            colorResponse[i] = fmax(fmin(colorResponse[i], 1.f),0.f);
+        return colorResponse;
+    }
 
 	inline void render (const Scene& scene, Image& image) {
 		size_t w = image.width();
@@ -160,31 +220,31 @@ public:
 			for (int x = 0; x < w; x++) {
                 // Trace m_numRays rays per pixel in random directions to get rid of aliasing
                 int counter = 0;
-                float shiftX, shiftY, eps = 1e-5;
+                float shiftX, shiftY;
                 Vec3f colorResponse(0.f, 0.f, 0.f);
-                //
+                // create vector with indices for stratified sampling
+                Vec3<vector<int>> vecInds;
+                for (int i = 0; i < 3; i++){
+                    vector<int> v(m_numRays); // vector with 100 ints.
+                    std::iota (std::begin(v), std::end(v), 0);
+                    vecInds[i] = v;
+                }
+                // shuffle them to get different indices for different coorfinates
+                std::shuffle ( vecInds[0].begin(), vecInds[0].end(), gen );
+                std::shuffle ( vecInds[1].begin(), vecInds[1].end(), gen );
+                std::shuffle ( vecInds[2].begin(), vecInds[2].end(), gen );
                 #pragma omp parallel for
                 for (int i = 0; i < m_numRays; i++){
                     shiftX = dis(gen);
                     shiftY = dis(gen);
                     Ray ray = camera.rayAt ((x + shiftX) / w, 1.f - (y + shiftY) / h);
-                
-                    size_t meshIndex;
-                    Vec3i triangle;
-                    float u, v, d;
-                    
-                    bool intersectionFound = rayTrace (ray, scene, meshIndex, triangle, u, v, d);
-                    
-                    if (intersectionFound && d > 0.f){
-                        colorResponse += shade (scene, meshIndex, triangle, u, v);
-                        // colorResponse += pathShade (scene, meshIndex, triangle, u, v);
-                        counter++;
-                        
-                    }
+                    bool posIntersectionFound = true;
+                    //colorResponse += normalizeColor(calculateColorRay (scene, ray, posIntersectionFound));
+                    colorResponse += normalizeColor(calculateColorPath (scene, ray, posIntersectionFound, 0, 3, Vec3i(vecInds[0][i], vecInds[1][i], vecInds[2][i])));
+                    if (posIntersectionFound) counter++;
                 }
                 //cout << x << " " << y << endl;
                 //cout << "colorResponse: " << colorResponse / float(N)<< endl;
-                //cout << "image (x,y): "  << image (x,y) * ((N - counter)  / float(N)) << endl;
                 image (x,y) = colorResponse  / float(m_numRays) +
                               image (x,y) * ((m_numRays - counter)  / float(m_numRays));
                 
