@@ -13,11 +13,15 @@
 
 using namespace std;
 
+#define RAYTRACE 0
+#define PATHTRACE 1
+#define PATHGUIDE 2
 
 class RayTracer {
 public:
-	RayTracer (int numRays) {
+	RayTracer (int numRays, int mode) {
         m_numRays = numRays;
+        m_mode = mode;
     }
 	virtual ~RayTracer() {}
     
@@ -215,12 +219,21 @@ public:
                 std::shuffle ( vecInds[2].begin(), vecInds[2].end(), gen );
                 #pragma omp parallel for
                 for (int i = 0; i < m_numRays; i++){
-                    shiftX = dis(gen);
-                    shiftY = dis(gen);
+                    Vec3f noise = jitterSample(i, m_numRays);
+                    shiftX = noise[0];
+                    shiftY = noise[1];
                     Ray ray = camera.rayAt ((x + shiftX) / w, 1.f - (y + shiftY) / h);
                     bool posIntersectionFound = true;
-                    //colorResponse += normalizeColor(calculateColorRay (scene, ray, posIntersectionFound));
-                    colorResponse += normalizeColor(calculateColorPath (scene, ray, posIntersectionFound, 0, 3, Vec3i(vecInds[0][i], vecInds[1][i], vecInds[2][i])));
+                    switch(m_mode){
+                        case RAYTRACE:
+                            colorResponse += normalizeColor(calculateColorRay (scene, ray, posIntersectionFound));
+                            break;
+                        case PATHTRACE:
+                            colorResponse += normalizeColor(calculateColorPath (scene, ray, posIntersectionFound, 0, 3, Vec3i(vecInds[0][i], vecInds[1][i], vecInds[2][i])));
+                            break;
+                        default:
+                            break;
+                    }
                     if (posIntersectionFound) counter++;
                 }
                 //cout << x << " " << y << endl;
@@ -235,7 +248,7 @@ public:
         
     
 private:
-    int m_numRays;
+    int m_numRays, m_mode;
     
     float stratifiedSample1D(int sampleIdx, int nSamples, float left, float right) {
         uniform_real_distribution<> dis(left, right);
@@ -256,6 +269,18 @@ private:
         direction.normalize();
         return normalize(normal * cos(theta) + direction * sin(theta));
     }
+    
+    
+    Vec3f jitterSample(int sampleIdx, int nSamples) {
+        uniform_real_distribution<> dis(0.0, 1.0);
+        int d = int(sqrt(float(nSamples)));
+        int j2 = sampleIdx / d;
+        int i2 = sampleIdx % d;
+        float x = (float(i2) + dis(gen)) / float(d);
+        float y = (float(j2) + dis(gen)) / float(d);
+        return {x, y, 0};
+    }
+
     
     inline Vec3f normalizeColor(Vec3f colorResponse) {
         for (int i = 0; i < 3; i++)

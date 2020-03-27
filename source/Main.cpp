@@ -71,19 +71,19 @@ int main (int argc, char ** argv) {
     LightSource lightsource_square(Vec3f(0.3f, 1.f, 1.1f),  // position
                             Vec3f(1.f, 1.f, 1.f),  // color
                             Vec3f(0.f, 0.3f, 0.f),  // direction
-                            1.f,                   // intensity
-                            0.5f),                  // sideLength
+                            5.f,                   // intensity
+                            1.f),                  // sideLength
     
     lightsource_point(Vec3f(1.3f, 1.f, 0.f),  // position
                         Vec3f(1.f, 1.f, 1.f),  // color
                         Vec3f(0.f, 0.f, 0.f),  // direction
-                        1.f,                   // intensity
+                        5.f,                   // intensity
                         0.001f),                 // sideLength
     
     lightsource_point2(Vec3f(-1.3f, 2.f, 1.f),  // position
                         Vec3f(1.f, 1.f, 1.f),  // color
                         Vec3f(0.f, 0.f, 0.f),  // direction
-                        0.7f,                   // intensity
+                        4.7f,                   // intensity
                         0.01f);                 // sideLength
     
     
@@ -94,30 +94,32 @@ int main (int argc, char ** argv) {
     scene.lightsources().push_back (lightsource_point2);
     
     // define materials
-    float kd = M_PI, // diffusion coeff
+    float cube_kd = 0.1f, // diffusion coeff,
+          walls_kd = 0.6f,
+          head_kd = 0.1f,
           // alpha coeff
-          cube_alpha = 0.9f,
-          walls_alpha = 0.2f,
-          head_alpha = 0.8f;
+          cube_alpha = 0.1f,
+          walls_alpha = 0.3f,
+          head_alpha = 0.1f;
     // albedo
-    Vec3f cube_albedo(0.4f, 0.4f, 0.9f),
-          walls_albedo(0.9f, 0.4f, 0.4f),
+    Vec3f cube_albedo(0.9f, 0.9f, 0.9f),
+          walls_albedo(0.9f, 0.5f, 0.5f),
           head_albedo(0.9f, 0.9f, 0.9f);
     // Fresnel term
-    Vec3f head_F0(1.0f, 0.86f, 0.57f), // gold
-          cube_F0(0.31f, 0.31f, 0.31f), // glass
-          walls_F0(1.f,1.f,1.f);
+    Vec3f head_F0(0.31f, 0.31f, 0.31f), // glass
+          cube_F0(1.0f, 0.86f, 0.57f), // gold
+          walls_F0(0.5f,0.5f,0.5f);
     
-	Material material_walls(kd, walls_alpha, walls_albedo, walls_F0),
-             material_head(kd, head_alpha, head_albedo, head_F0),
-             material_cube(kd, cube_alpha, cube_albedo, cube_F0),
-             material_cube2(kd, 0.5f, Vec3f(0.9f, 0.9f, 0.9f), Vec3f(0.03,0.03,0.03));
+	Material material_head(head_kd, head_alpha, head_albedo, head_F0),
+             material_cube(cube_kd, cube_alpha, cube_albedo, cube_F0),
+             material_walls(walls_kd, walls_alpha, walls_albedo, walls_F0),
+             material_cube2(walls_kd, walls_alpha, Vec3f(0.4f, 0.4f, 0.9f), Vec3f(0.3,0.3,0.3));
     
 	Mesh mesh_head, mesh_walls, mesh_cube, mesh_cube2;
     mesh_head.material() = material_head;
-    mesh_walls.material() = material_cube2;
+    mesh_walls.material() = material_walls;
     mesh_cube.material() = material_cube;
-    mesh_cube2.material() = material_walls;
+    mesh_cube2.material() = material_cube2;
     //material_cube2;
     
     // Loading meshes
@@ -166,7 +168,7 @@ int main (int argc, char ** argv) {
     scene.meshes ().push_back (mesh_cube2);
     
     std::cout << "RayTracer creation: starts";
-	RayTracer rayTracer(args.numRays ());
+	RayTracer rayTracer(args.numRays (), args.mode ());
     std::cout << ".....ends." << std::endl;
     
 	// Rendering
