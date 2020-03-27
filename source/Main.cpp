@@ -110,17 +110,21 @@ int main (int argc, char ** argv) {
     
 	Material material_walls(kd, walls_alpha, walls_albedo, walls_F0),
              material_head(kd, head_alpha, head_albedo, head_F0),
-             material_cube(kd, cube_alpha, cube_albedo, cube_F0);
+             material_cube(kd, cube_alpha, cube_albedo, cube_F0),
+             material_cube2(kd, 0.5f, Vec3f(0.9f, 0.9f, 0.9f), Vec3f(0.03,0.03,0.03));
     
-	Mesh mesh_head, mesh_walls, mesh_cube;
+	Mesh mesh_head, mesh_walls, mesh_cube, mesh_cube2;
     mesh_head.material() = material_head;
-    mesh_walls.material() = material_walls;
+    mesh_walls.material() = material_cube2;
     mesh_cube.material() = material_cube;
+    mesh_cube2.material() = material_walls;
+    //material_cube2;
     
     // Loading meshes
 	try {
-		mesh_head.loadOFF("../meshes/example.off");
+		mesh_head.loadOFF("../meshes/example_cube.off");
         mesh_cube.loadOFF("../meshes/cube_tri.off");
+        mesh_cube2.loadOFF("../meshes/cube_tri2.off");
 	}
 	catch (const std::exception & e) {
 		std::cerr << e.what() << std::endl;
@@ -157,8 +161,9 @@ int main (int argc, char ** argv) {
     
     
     scene.meshes ().push_back (mesh_walls);
-    //scene.meshes ().push_back (mesh_head);
+    scene.meshes ().push_back (mesh_head);
     scene.meshes ().push_back (mesh_cube);
+    scene.meshes ().push_back (mesh_cube2);
     
     std::cout << "RayTracer creation: starts";
 	RayTracer rayTracer(args.numRays ());

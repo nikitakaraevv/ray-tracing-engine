@@ -13,21 +13,6 @@
 
 using namespace std;
 
-void printProgressBar(float prop) {
-    int progress = round(50.0f * prop);
-    string progressBar = "";
-    for (int i=0; i<progress; i++) {
-        progressBar += "\u2588";
-    }
-    std::cout << "Raytracing... [" << progressBar << string(50 - progress, ' ') << "] " << progress * 2 << "%\r" << flush;
-}
-
-float stratifiedSample1D(int sampleIdx, int nSamples, float left, float right) {
-    uniform_real_distribution<> dis(left, right);
-    float invNSamples = (right-left) / nSamples,
-    delta = 0.5f;
-    return left + (sampleIdx + delta * dis(gen)) * invNSamples;
-}
 
 class RayTracer {
 public:
@@ -192,20 +177,15 @@ public:
         // check that all the values are less than one
         
         uniform_real_distribution<float> dis(-1.f,1.f);
-        Vec3f randomDirection(stratifiedSample1D(sampleIds[0], m_numRays, -1.f, 1.f),
-                              stratifiedSample1D(sampleIds[1], m_numRays, -1.f, 1.f),
-                              stratifiedSample1D(sampleIds[2], m_numRays, -1.f, 1.f));
-        
+        //Vec3f randomDirection(stratifiedSample1D(sampleIds[0], m_numRays, -1.f, 1.f),
+                              //stratifiedSample1D(sampleIds[1], m_numRays, -1.f, 1.f),
+                              //stratifiedSample1D(sampleIds[2], m_numRays, -1.f, 1.f));
+        Vec3f randomDirection(importanceSample(hitNormal));
         Ray nextRay(trianglePoint, randomDirection);
         
         return colorResponse + calculateColorPath(scene, nextRay, posIntersectionFound, depth+1, finalDepth, sampleIds);
     }
     
-    inline Vec3f normalizeColor(Vec3f colorResponse) {
-        for (int i = 0; i < 3; i++)
-            colorResponse[i] = fmax(fmin(colorResponse[i], 1.f),0.f);
-        return colorResponse;
-    }
 
 	inline void render (const Scene& scene, Image& image) {
 		size_t w = image.width();
@@ -256,4 +236,40 @@ public:
     
 private:
     int m_numRays;
+    
+    float stratifiedSample1D(int sampleIdx, int nSamples, float left, float right) {
+        uniform_real_distribution<> dis(left, right);
+        float invNSamples = (right-left) / nSamples,
+        delta = 0.5f;
+        return left + (sampleIdx + delta * dis(gen)) * invNSamples;
+    }
+    Vec3f importanceSample(Vec3f normal) {
+        uniform_real_distribution<> dis(0.0, 1.0);
+        normal.normalize();
+        Vec3f v1, v2;
+        normal.getTwoOrthogonals(v1, v2);
+        v1.normalize();
+        v2.normalize();
+        float theta = asin(dis(gen));
+        float phi = 2 * M_PI * dis(gen);
+        Vec3f direction = v1 * cos(phi) + v2 * sin(phi);
+        direction.normalize();
+        return normalize(normal * cos(theta) + direction * sin(theta));
+    }
+    
+    inline Vec3f normalizeColor(Vec3f colorResponse) {
+        for (int i = 0; i < 3; i++)
+            colorResponse[i] = fmax(fmin(colorResponse[i], 1.f),0.f);
+        return colorResponse;
+    }
+    
+    void printProgressBar(float prop) {
+        int progress = round(50.0f * prop);
+        string progressBar = "";
+        for (int i=0; i<progress; i++) {
+            progressBar += "\u2588";
+        }
+        std::cout << "Raytracing... [" << progressBar << string(50 - progress, ' ') << "] " << progress * 2 << "%\r" << flush;
+    }
+
 };
