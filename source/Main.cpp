@@ -18,6 +18,7 @@
 #include "RayTracer.h"
 #include "Material.h"
 #include "LightSource.h"
+#include "Renderer.h"
 #include <chrono>
 
 
@@ -71,19 +72,19 @@ int main (int argc, char ** argv) {
     LightSource lightsource_square(Vec3f(0.3f, 1.f, 1.1f),  // position
                             Vec3f(1.f, 1.f, 1.f),  // color
                             Vec3f(0.f, 0.3f, 0.f),  // direction
-                            5.f,                   // intensity
+                            1.f,                   // intensity
                             1.f),                  // sideLength
     
     lightsource_point(Vec3f(1.3f, 1.f, 0.f),  // position
                         Vec3f(1.f, 1.f, 1.f),  // color
                         Vec3f(0.f, 0.f, 0.f),  // direction
-                        5.f,                   // intensity
+                        1.f,                   // intensity
                         0.001f),                 // sideLength
     
     lightsource_point2(Vec3f(-1.3f, 2.f, 1.f),  // position
                         Vec3f(1.f, 1.f, 1.f),  // color
                         Vec3f(0.f, 0.f, 0.f),  // direction
-                        4.7f,                   // intensity
+                        0.7f,                   // intensity
                         0.01f);                 // sideLength
     
     
@@ -157,9 +158,9 @@ int main (int argc, char ** argv) {
     createPlane(mesh_walls,  corners,  normal2);
     
     
-    mesh_walls.computeBVH();
-    mesh_head.computeBVH();
-    mesh_cube.computeBVH();
+    //mesh_walls.computeBVH();
+    //mesh_head.computeBVH();
+    //mesh_cube.computeBVH();
     
     
     scene.meshes ().push_back (mesh_walls);
@@ -168,16 +169,18 @@ int main (int argc, char ** argv) {
     scene.meshes ().push_back (mesh_cube2);
     
     std::cout << "RayTracer creation: starts";
-	RayTracer rayTracer(args.numRays (), args.mode ());
-    std::cout << ".....ends." << std::endl;
+    RayTracer rayTracer;
+	Renderer renderer(args.numRays (), args.mode (), rayTracer);
+    //GuidedPathTracer rayTracer(args.numRays (), args.mode ());
     
+    std::cout << ".....ends." << std::endl;
 	// Rendering
 	std::cout << "Background filling: starts";
 	image.fillBackground ();
     std::cout << ".....ends." << std::endl;
 
     //std::cout << "Ray tracing: starts";
-	rayTracer.render (scene, image);
+	renderer.render (scene, image);
 	//std::cout << "ends." << std::endl;
     
     

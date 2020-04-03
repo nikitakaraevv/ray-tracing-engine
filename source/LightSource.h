@@ -28,6 +28,7 @@ public:
         m_normal = normalize(m_direction - m_position);
         m_vertical = normalize(cross(m_normal, m_normal + Vec3f(1.f,0.f,0.f)));
         m_horizontal = normalize(cross(m_normal, m_vertical));
+        
         //cout << "m_vertical: " << m_vertical <<endl;
         //cout << "m_horizontal: " << m_horizontal <<endl;
     }
@@ -46,10 +47,13 @@ public:
 	
     inline float intensity() { return m_intensity; }
     
-    inline Vec3f evaluateLight (const Vec3f &point) {
+    inline float radiance(const Vec3f &point) {
         float d = dist(point, m_position);
-        //cout << "dist: " << d << endl;
-        return m_color * m_intensity / (ac + al * d + aq * d*d);
+        return  m_intensity / (ac + al * d + aq * d*d);
+    }
+    
+    inline Vec3f evaluateLight (const Vec3f &point) {
+        return m_factor * m_color * radiance(point);
     }
 private:
 	Vec3f m_position,
@@ -58,9 +62,10 @@ private:
           m_normal,
           m_vertical,
           m_horizontal;
-    
+    float m_factor = 3.5f;
     uniform_real_distribution<float> uniform;
-    float m_intensity, m_sideLength = 0., ac = 0, al = 0, aq = 1;
+    float m_intensity, m_sideLength = 0.,
+    ac = 1.f, al = 0.3f, aq = 0.3f;
     
     
 };
