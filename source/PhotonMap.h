@@ -3,14 +3,14 @@
 #include <vector>
 #include "Vec3.h"
 #include "RayTracer.h"
+#include "kdtree.h"
 
 using namespace std;
 
-class ParticleMap {
+class PhotonMap {
     public:
-        vector<Particle> list;
-        ParticleMap(){}
-        ParticleMap (const Scene & scene, int numOfPhotons, RayTracer rayTracer)
+        PhotonMap(){}
+        PhotonMap (const Scene & scene, int numOfPhotons, RayTracer rayTracer)
         {
             m_rayTracer = rayTracer;
             float lightPdf = 1.f / scene.lightsources().size();
@@ -34,17 +34,30 @@ class ParticleMap {
             for (int i=0; i< 15; i++)
                 cout << depths[i] << " photons with depth " << i<<  endl;
             
-        
         }
     
         int size(){
-            return this->list.size();
+            return this->m_list.size();
         }
+    
+        inline vector<Particle>& list() { return m_list; }
+        
+        inline const vector<Particle>& list() const { return m_list; }
+        
+        //inline const kdtree& tree() const { return m_tree; }
+    
+        //const Particle& nearest(const Particle& pt){
+        //    return m_tree.nearest(pt);
+        //}
+    
+        //void knearest(const Particle& pt, int k, vector<Particle>& result){
+        //    return m_tree.knearest(pt, k, result);
+        //}
     
         inline int calculateParticlePath (const Scene & scene, Ray ray, Particle photon, int depth, bool exit) {
         // return if the final depth is reached
         if (exit){
-            list.push_back(photon);
+            m_list.push_back(photon);
             return depth-1;
         }
         
@@ -56,7 +69,7 @@ class ParticleMap {
        
         // save the last photon position and direction if an intersection is not found
         if (not (intersectionFound && d > 0.f)){
-            if (depth!=0) list.push_back(photon);
+            if (depth!=0) m_list.push_back(photon);
             return -1;
         }
         w = 1.f - u - v;
@@ -106,13 +119,13 @@ class ParticleMap {
          << "SIZE 4 4 4 4 4 4" << endl
          << "TYPE F F F F F F" << endl
          << "COUNT 1 1 1 1 1 1" << endl
-         << "WIDTH " << list.size() << endl
+         << "WIDTH " << m_list.size() << endl
          << "HEIGHT 1" << endl
          << "VIEWPOINT 0 0 0 1 0 0 0" << endl
-         << "POINTS " << list.size() << endl
+         << "POINTS " << m_list.size() << endl
         << "DATA ascii" << endl;
-        for (size_t i = 0; i < list.size(); i++){
-            Particle p(list[i]);
+        for (size_t i = 0; i < m_list.size(); i++){
+            Particle p(m_list[i]);
                 out << p.position()[0] << " "
                     << p.position()[1] << " "
                     << p.position()[2]  << " "
@@ -128,6 +141,7 @@ class ParticleMap {
     
     private:
         RayTracer m_rayTracer;
-        
+        vector<Particle> m_list;
+        //kdtree m_tree;
     
 };

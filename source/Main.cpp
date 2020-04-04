@@ -168,9 +168,16 @@ int main (int argc, char ** argv) {
     scene.meshes ().push_back (mesh_cube);
     scene.meshes ().push_back (mesh_cube2);
     
+    
+    //int numPhotons = 50000, k=5;
+     
     std::cout << "RayTracer creation: starts";
     RayTracer rayTracer;
-	Renderer renderer(args.numRays (), args.mode (), rayTracer);
+    Renderer renderer;
+    if (args.numPhotons() > 0 )
+        renderer = Renderer(args.numRays (), args.mode (), rayTracer, args.numPhotons(), args.k());
+    else
+        renderer = Renderer(args.numRays (), args.mode (), rayTracer);
     //GuidedPathTracer rayTracer(args.numRays (), args.mode ());
     
     std::cout << ".....ends." << std::endl;

@@ -226,11 +226,12 @@ public:
     
      void knearest(const Particle& pt, int k, vector<Particle>& result)
     {
+        
         if (root_ == nullptr)
             throw std::logic_error("tree is empty");
         if (k > nodes_.size())
             throw std::logic_error("k is greater than the number of nodes");
-        
+        k_nearest_.clear();
         // initialize the vector
         for (int i =0; i< k; i++)
             k_nearest_.push_back(nodes_[i]);
