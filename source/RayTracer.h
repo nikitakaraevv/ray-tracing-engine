@@ -13,12 +13,18 @@
 
 using namespace std;
 
+///  This class allows to trace rays either in a brute force manner or using BVH
 class RayTracer {
 public:
 	RayTracer () {
     }
 	virtual ~RayTracer() {}
     
+    /**
+     * Traces a ray. If an intersection is found, returns true.
+     * Saves index of the intersected mesh, intersected triangle,
+     * and barycentric coordinates on it.
+    */
     inline bool rayTrace (const Ray & ray,
                           const Scene & scene,
                           size_t & meshIndex,
@@ -30,7 +36,6 @@ public:
         float closest = std::numeric_limits<float>::max();
         bool intersectionFound = false;
         for (size_t mIndex = 0; mIndex < meshes.size(); mIndex++) {
-            chrono::steady_clock::time_point begin = chrono::steady_clock::now();
             const auto& P = meshes[mIndex].vertexPositions();
             const auto& T = meshes[mIndex].indexedTriangles();
             for (size_t tIndex = 0; tIndex < T.size(); tIndex++) {
@@ -48,33 +53,26 @@ public:
                     }
                 }
             }
-            chrono::steady_clock::time_point end = chrono::steady_clock::now();
-            int diff = chrono::duration_cast<chrono::nanoseconds>(end - begin).count();
-            //if (diff>100000)
-            //cout << "Raytr intersection took " << diff << "[ns]" << endl;
         }
         return intersectionFound;
     }
     
+    /// The same function using BVH
 	inline bool rayTraceBVH (Ray & ray,
-						  const Scene & scene, 
-						  size_t & nearest_index,
-						  Vec3i & nearest_triangle,
-						  float & u, 
-						  float & v, 
-						  float & d) {
+                             const Scene & scene,
+                             size_t & nearest_index,
+                             Vec3i & nearest_triangle,
+                             float & u,
+                             float & v,
+                             float & d) {
         
         vector<Mesh> meshes = scene.meshes();
         int mesh_index = 0;
         vector<float> nearest_intersection = {};
         for (Mesh const &mesh : meshes) {
             Vec3i triangle;
-            chrono::steady_clock::time_point begin = chrono::steady_clock::now();
             vector<float> intersection = mesh.bvh().intersection(ray, triangle, mesh.vertexPositions(), mesh.indexedTriangles());
-            chrono::steady_clock::time_point end = chrono::steady_clock::now();
-            int diff = chrono::duration_cast<chrono::nanoseconds>(end - begin).count();
-            //if (diff>100000)
-            //cout << "Raytr intersection took " << diff << "[ns]" << endl;
+
             if (intersection.size() > 0) {
                 if (nearest_intersection.size() == 0 or nearest_intersection[3] > intersection[3]) {
                         nearest_intersection = intersection;
@@ -94,7 +92,7 @@ public:
         return false;
     }
     
-    
+    /// Different sampling functions
     float stratifiedSample1D(int sampleIdx, int nSamples, float left, float right) {
         uniform_real_distribution<> dis(left, right);
         float invNSamples = (right-left) / nSamples,

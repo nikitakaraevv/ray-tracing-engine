@@ -10,7 +10,8 @@
 
 using namespace std;
 
-
+/// Bounding volume hierarchy (a tree structure on a set of geometric objects).
+/// All geometric objects are wrapped in bounding boxes that form the leaf nodes of the tree.
 class BVH {
     public:
         AABB m_aabb;
@@ -169,7 +170,6 @@ class BVH {
             Vec3f entry;
             Vec3f exit;
             if (this->m_aabb.intersectionTest(r, entry, exit)) {
-                //cout << "AABB intersection found" << endl;
                 if (this->m_child_1 == NULL) {
                     vector<float> best_inter = vector<float>();
                     for (auto t_idx : this->m_triangles) {

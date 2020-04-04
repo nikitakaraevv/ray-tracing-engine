@@ -12,13 +12,13 @@
 #include "BVH.h"
 
 typedef Vec3i Triangle;
-// A simple container for mesh data
+/// A simple container for mesh data
 class Mesh {
 public:
     Mesh() {
-            m_aabb = AABB();
-            m_bvh = BVH();
-            }
+        m_aabb = AABB();
+        m_bvh = BVH();
+    }
     
 	const std::vector<Vec3f>& vertexPositions() const { return m_vertexPositions; }
 
