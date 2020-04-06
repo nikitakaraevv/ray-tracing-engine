@@ -98,6 +98,63 @@ inline void rotationY(Mesh &mesh, float phi) {
   mesh.vertexPositions() = vertexPositions;
 }
 
+void initLightSources(Scene &scene) {
+    // Initialize lightsources
+    LightSource lightsource_point(Vec3f(-1.4f, 1.f, 2.9f),  // position
+                                  Vec3f(1.f, 1.f, 1.f),     // color
+                                  Vec3f(0.3f, 0.f, -1.f),   // direction
+                                  0.85f,                      // intensity
+                                  0.01f),                   // sideLength
+
+        lightsource_point2(Vec3f(1.4f, 1.f, 2.9f),   // position
+                           Vec3f(1.f, 1.f, 1.f),     // color
+                           Vec3f(-0.3f, 0.f, -1.f),  // direction
+                           0.85f,                      // intensity
+                           0.01f),                   // sideLength
+
+        lightsource_square(Vec3f(0.f, -0.3f, 1.1f),  // position
+                           Vec3f(1.f, 1.f, 1.f),     // color
+                           Vec3f(0.f, 0.f, -1.f),    // direction
+                           0.85f,                      // intensity
+                           0.1f);                    // sideLength
+
+    scene.lightsources().push_back(lightsource_point);
+    scene.lightsources().push_back(lightsource_point2);
+    scene.lightsources().push_back(lightsource_square);
+
+}
+
+void initLightMaterials(Mesh & mesh_walls,
+                        Mesh & mesh_cube,
+                        Mesh & mesh_cube2,
+                        Mesh &mesh_left_wall,
+                        Mesh & mesh_right_wall) {
+    // Initialize materials of the meshes
+    float cube_kd = 0.1f,  // diffusion coeff,
+        walls_kd = 0.6f,
+          // alpha coeff
+        cube_alpha = 0.1f, walls_alpha = 0.3f;
+    // albedo
+    Vec3f cube_albedo(0.9f, 0.9f, 0.9f), walls_albedo(0.96f, 0.96f, 0.86f);
+    // Fresnel term
+    Vec3f //(0.31f, 0.31f, 0.31f)  // glass
+        cube_F0(1.0f, 0.86f, 0.57f),     // gold
+        walls_F0(0.5f, 0.5f, 0.5f);
+
+    Material material_cube(cube_kd, cube_alpha, cube_albedo, cube_F0),
+        material_walls(walls_kd, walls_alpha, walls_albedo, walls_F0),
+        material_lw(walls_kd, walls_alpha, Vec3f(0.9f, 0.3f, 0.3f), walls_F0),
+        material_rw(walls_kd, walls_alpha, Vec3f(0.3f, 0.9f, 0.3f), walls_F0),
+        material_cube2(0.8f, 0.9f, Vec3f(0.4f, 0.4f, 0.9f), Vec3f(0.3, 0.3, 0.3));
+
+    
+    mesh_walls.material() = material_walls;
+    mesh_cube.material() = material_cube;
+    mesh_cube2.material() = material_cube2;
+    mesh_left_wall.material() = material_lw;
+    mesh_right_wall.material() = material_rw;
+}
+
 int main(int argc, char **argv) {
   CommandLine args;
   if (argc > 1) {
@@ -111,74 +168,32 @@ int main(int argc, char **argv) {
   }
   chrono::steady_clock::time_point begin = chrono::steady_clock::now();
   // Initialization
-
   Image image(args.width(), args.height());
   Scene scene;
 
+    
+  // Initialize camera
   Camera camera(Vec3f(0.3f, 0.6f, 2.3f), Vec3f(), Vec3f(0.f, 1.f, 0.f), 60.f,
                 float(args.width()) / args.height());
 
   scene.camera() = camera;
-
-  // LightSource lightsource(Vec3f(0.f, 2.f, 2.f),
-  //                        Vec3f(1.f, 1.f, 1.f),
-  //                        0.9f);
-  // define lightsources
-  LightSource lightsource_point(Vec3f(-1.4f, 1.f, 2.9f),  // position
-                                Vec3f(1.f, 1.f, 1.f),     // color
-                                Vec3f(0.3f, 0.f, -1.f),   // direction
-                                1.f,                      // intensity
-                                0.01f),                   // sideLength
-
-      lightsource_point2(Vec3f(1.4f, 1.f, 2.9f),   // position
-                         Vec3f(1.f, 1.f, 1.f),     // color
-                         Vec3f(-0.3f, 0.f, -1.f),  // direction
-                         1.f,                      // intensity
-                         0.01f),                   // sideLength
-
-      lightsource_square(Vec3f(0.f, -0.3f, 1.1f),  // position
-                         Vec3f(1.f, 1.f, 1.f),     // color
-                         Vec3f(0.f, 0.f, -1.f),    // direction
-                         1.f,                      // intensity
-                         0.1f);                    // sideLength
-
-  scene.lightsources().push_back(lightsource_point);
-  scene.lightsources().push_back(lightsource_point2);
-  scene.lightsources().push_back(lightsource_square);
-
-  // define materials
-  float cube_kd = 0.1f,  // diffusion coeff,
-      walls_kd = 0.6f, head_kd = 0.1f,
-        // alpha coeff
-      cube_alpha = 0.1f, walls_alpha = 0.3f, head_alpha = 0.1f;
-  // albedo
-  Vec3f cube_albedo(0.9f, 0.9f, 0.9f), walls_albedo(0.96f, 0.96f, 0.86f),
-      head_albedo(0.9f, 0.9f, 0.9f);
-  // Fresnel term
-  Vec3f head_F0(0.31f, 0.31f, 0.31f),  // glass
-      cube_F0(1.0f, 0.86f, 0.57f),     // gold
-      walls_F0(0.5f, 0.5f, 0.5f);
-
-  Material material_head(head_kd, head_alpha, head_albedo, head_F0),
-      material_cube(cube_kd, cube_alpha, cube_albedo, cube_F0),
-      material_walls(walls_kd, walls_alpha, walls_albedo, walls_F0),
-      material_lw(walls_kd, walls_alpha, Vec3f(0.9f, 0.3f, 0.3f), walls_F0),
-      material_rw(walls_kd, walls_alpha, Vec3f(0.3f, 0.9f, 0.3f), walls_F0),
-      material_cube2(0.8f, 0.9f, Vec3f(0.4f, 0.4f, 0.9f), Vec3f(0.3, 0.3, 0.3));
-
-  Mesh mesh_head, mesh_walls, mesh_cube, mesh_cube2, mesh_left_wall,
-      mesh_right_wall;
-  mesh_head.material() = material_head;
-  mesh_walls.material() = material_walls;
-  mesh_cube.material() = material_cube;
-  mesh_cube2.material() = material_cube2;
-  mesh_left_wall.material() = material_lw;
-  mesh_right_wall.material() = material_rw;
-  // material_cube2;
+    
+  // Initialize lightsources
+  initLightSources(scene);
+    
+  // Initialize meshes
+  Mesh mesh_walls, mesh_cube, mesh_cube2, mesh_left_wall,
+        mesh_right_wall;
+    
+  // Initialize materials of the meshes
+  initLightMaterials( mesh_walls,
+                      mesh_cube,
+                      mesh_cube2,
+                      mesh_left_wall,
+                      mesh_right_wall);
 
   // Loading meshes
   try {
-    mesh_head.loadOFF("../meshes/example_cube.off");
     mesh_cube.loadOFF("../meshes/cube_tri.off");
     mesh_cube2.loadOFF("../meshes/cube_tri2.off");
   } catch (const std::exception &e) {
@@ -186,25 +201,24 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
+  // Creating the Cornell box scene
   float box_size = 1.51f, ceiling = 1.5f;
-  // Creating the ground
   createCornellBox(box_size, ceiling, mesh_walls, mesh_right_wall,
                    mesh_left_wall);
   // mesh_walls.computeBVH();
-  // mesh_head.computeBVH();
   // mesh_cube.computeBVH();
+    
+  // Rotate cubes in the scene
   rotationY(mesh_cube, M_PI / 4.5f);
   rotationY(mesh_cube2, -M_PI / 4.5f);
 
   scene.meshes().push_back(mesh_walls);
   scene.meshes().push_back(mesh_left_wall);
   scene.meshes().push_back(mesh_right_wall);
-  // scene.meshes().push_back(mesh_head);
   scene.meshes().push_back(mesh_cube);
   scene.meshes().push_back(mesh_cube2);
-
-  // int numPhotons = 50000, k=5;
-  std::cout << "RayTracer creation: starts";
+    
+  // Create different renderers depending on usage of photon mapping
   RayTracer rayTracer;
   Renderer renderer;
   if (args.numPhotons() > 0)
@@ -212,18 +226,13 @@ int main(int argc, char **argv) {
                         args.numPhotons(), args.k());
   else
     renderer = Renderer(scene, args.numRays(), args.mode(), rayTracer);
-  // GuidedPathTracer rayTracer(args.numRays (), args.mode ());
 
-  std::cout << ".....ends." << std::endl;
-  // Rendering
-  std::cout << "Background filling: starts";
   image.fillBackground();
-  std::cout << ".....ends." << std::endl;
 
-  // std::cout << "Ray tracing: starts";
+   // Rendering
   renderer.render(image);
-  // std::cout << "ends." << std::endl;
-
+    
+  // Save final ppm image
   image.savePPM(args.outputFilename());
   chrono::steady_clock::time_point end = chrono::steady_clock::now();
   std::cout

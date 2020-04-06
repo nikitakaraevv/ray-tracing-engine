@@ -10,6 +10,8 @@ using namespace std;
 #define RAYTRACE 0
 #define PATHTRACE 1
 
+
+///  The most important class. All the rendering algorithms are implemented here.
 class Renderer {
  public:
   Renderer() {}
@@ -47,14 +49,13 @@ class Renderer {
     const auto& P = mesh.vertexPositions();
     const auto& N = mesh.vertexNormals();
     const Camera& camera = m_scene.camera();
-    // const Vec3i& triangle = mesh.indexedTriangles()[triangleIndex];
+    
     hitNormal = normalize(dotArr(N, triangle, w, u, v));
     trianglePoint = dotArr(P, triangle, w, u, v);
     Vec3f radiance, bsdf;
 
     Material material = mesh.material();
     Vec3f pointCameraDirection = camera.position() - trianglePoint;
-    // cout <<"start"<< endl;
 
     for (LightSource lightSource : m_scene.lightsources()) {
       // Check that the point on the triangle is iluminated by light
@@ -79,25 +80,19 @@ class Renderer {
     const auto& P = mesh.vertexPositions();
     const auto& N = mesh.vertexNormals();
     const Camera& camera = m_scene.camera();
-    // const Vec3i& triangle = mesh.indexedTriangles()[triangleIndex];
+    
     hitNormal = normalize(dotArr(N, triangle, w, u, v));
     trianglePoint = dotArr(P, triangle, w, u, v);
     Vec3f radiance, bsdf;
 
     Material material = mesh.material();
     Vec3f pointCameraDirection = camera.position() - trianglePoint;
-    // cout <<"start"<< endl;
 
     vector<Particle> result;
     Particle triangleParticle;
     triangleParticle.position() = trianglePoint;
-    // cout <<"ooop"<< endl;
+   
     particleTree.knearest(triangleParticle, m_k, result);
-    // std::cout << "Test kdtree:\n";
-    // for (int i = 0; i < m_k; i++)
-    // std::cout << "knearest point: " << i << ": " << result[i].position() <<
-    // ", dist: " << dist(triangleParticle.position(), result[i].position()) <<
-    // endl;
 
     // radius of the sphere containing the k photons
     float r = dist(result[m_k - 1].position(), trianglePoint),
@@ -277,8 +272,9 @@ class Renderer {
           saveImage(x, y) =
               (updateImage(x, y) / float(i + 1)) +
               image(x, y) * (i + 1 - counter[x][y]) / float(i + 1);
-      std::string saveName = "photonmapPathtrace/update_";
-      saveName += to_string(i) + ".ppm";
+      //std::string saveName = "photonmapPathtrace/update_";
+      //saveName += to_string(i) + ".ppm";
+      string saveName = "update.ppm";
       saveImage.savePPM(saveName);
     }
     image = saveImage;
