@@ -35,6 +35,8 @@ class Renderer {
    */
   void render(Image& image);
 
+  void savePhotonMap();
+
  private:
   int m_numRays, m_mode, m_numPhotons, m_k;
   PhotonMap m_photonMap, m_importonMap;

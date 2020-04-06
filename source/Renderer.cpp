@@ -207,7 +207,7 @@ void Renderer::render(Image& image) {
   // photon map test
   Image updateImage(w, h), saveImage(w, h);
   PhotonMap m_photonMap(m_scene, m_numPhotons, m_rayTracer);
-  m_photonMap.saveToPCD("pointcloud.pcd");
+
   if (m_numPhotons > 0)
     cout << "Constructing a kd-tree for the photon map." << endl;
   kdtree photonTree(m_photonMap.list().begin(), m_photonMap.list().end());
@@ -281,6 +281,8 @@ inline Vec3f Renderer::normalizeColor(Vec3f colorResponse) {
     colorResponse[i] = fmax(fmin(colorResponse[i], 1.f), 0.f);
   return colorResponse;
 }
+
+void Renderer::savePhotonMap() { m_photonMap.saveToPCD("pointcloud.pcd"); }
 
 void Renderer::printProgressBar(float prop) {
   int progress = round(50.0f * prop);

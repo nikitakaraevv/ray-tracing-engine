@@ -152,15 +152,14 @@ void initLightMaterials(Mesh &mesh_walls, Mesh &mesh_cube, Mesh &mesh_cube2,
 
 int main(int argc, char **argv) {
   CommandLine args;
-  if (argc > 1) {
-    try {
-      args.parse(argc, argv);
-    } catch (const std::exception &e) {
-      std::cerr << e.what() << std::endl;
-      args.printUsage(argv[0]);
-      exit(1);
-    }
+  try {
+    args.parse(argc, argv);
+  } catch (const std::exception &e) {
+    std::cerr << e.what() << std::endl;
+    args.printUsage(argv[0]);
+    exit(1);
   }
+
   chrono::steady_clock::time_point begin = chrono::steady_clock::now();
   // Initialization
   Image image(args.width(), args.height());
@@ -211,10 +210,12 @@ int main(int argc, char **argv) {
   // Create different renderers depending on usage of photon mapping
   RayTracer rayTracer;
   Renderer renderer;
-  if (args.numPhotons() > 0)
+  if (args.numPhotons() > 0) {
     renderer = Renderer(scene, args.numRays(), args.mode(), rayTracer,
                         args.numPhotons(), args.k());
-  else
+    renderer.savePhotonMap();
+
+  } else
     renderer = Renderer(scene, args.numRays(), args.mode(), rayTracer);
 
   image.fillBackground();

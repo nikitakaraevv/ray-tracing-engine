@@ -3,13 +3,15 @@
 #include <exception>
 #include <string>
 
+using namespace std;
+
 /// Helper class to parse the command line arguments
 class CommandLine {
  public:
   inline CommandLine()
-      : m_width(480),
+      : m_width(380),
         m_height(270),
-        m_numRays(6),
+        m_numRays(16),
         m_mode(0),
         m_numPhotons(0),
         m_k(5),
@@ -73,6 +75,25 @@ class CommandLine {
                 .c_str());
       }
     }
+    cout << "#########################" << endl;
+    cout << "Mode: ";
+    if (m_mode == 0)
+      cout << "Ray tracing" << endl;
+    else if (m_mode == 1)
+      cout << "Path tracing" << endl;
+    else {
+      m_mode = 0;
+      cout << "Ray tracing" << endl;
+    }
+    cout << "Photon map ";
+    if (m_numPhotons == 0)
+      cout << "OFF" << endl;
+    else
+      cout << "ON with " << m_numPhotons
+           << " photons. Number of searched neighbours equals " << m_k << endl;
+    cout << "width: " << m_width << ", height: " << m_height << endl;
+    cout << "Output image filename: " << m_outputFilename << endl;
+    cout << "#########################" << endl << endl;
   }
 
  private:
