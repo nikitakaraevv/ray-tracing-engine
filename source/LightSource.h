@@ -27,7 +27,8 @@ class LightSource {
 
     // Calculate the normal and basis vectors for our square area
     m_normal = normalize(m_direction - m_position);
-    m_vertical = normalize(cross(m_normal, m_normal + Vec3f(1.f, 0.f, 0.f)));
+    m_vertical =
+        normalize(cross(m_normal, normalize(m_normal + Vec3f(1.f, 0.f, 0.f))));
     m_horizontal = normalize(cross(m_normal, m_vertical));
   }
 
@@ -59,7 +60,7 @@ class LightSource {
 
  private:
   Vec3f m_position, m_color, m_direction, m_normal, m_vertical, m_horizontal;
-  float m_factor = 3.5f;
+  float m_factor = 4.5f;
   uniform_real_distribution<float> uniform;
   float m_intensity, m_sideLength = 0., ac = 1.f, al = 0.3f, aq = 0.3f;
 };

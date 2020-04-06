@@ -9,9 +9,6 @@
 using namespace std;
 
 class PhotonMap {
-  RayTracer m_rayTracer;
-  vector<Particle> m_list;
-
  public:
   PhotonMap() {}
   PhotonMap(const Scene& scene, int numOfPhotons, RayTracer rayTracer) {
@@ -25,7 +22,7 @@ class PhotonMap {
            << endl;
 
       // Save depths of emmited photons
-      vector<int> depths(50);
+      vector<int> depths(m_max_depth);
       for (LightSource lightSource : scene.lightsources()) {
         Vec3f lsNormal = lightSource.normal();
         for (int i = 0; i < photonsPerLS; i++) {
@@ -58,6 +55,39 @@ class PhotonMap {
 
   inline const vector<Particle>& list() const { return m_list; }
 
+  /// Save constructed photon map to a .pcd file (point cloud)
+  inline void saveToPCD(const std::string& filename) {
+    std::ofstream out(filename.c_str());
+    if (!out) {
+      std::cerr << "Cannot open file " << filename.c_str() << std::endl;
+      std::exit(1);
+    }
+    out << "VERSION .7" << endl
+        << "FIELDS x y z normal_x normal_y normal_z" << endl
+        << "SIZE 4 4 4 4 4 4" << endl
+        << "TYPE F F F F F F" << endl
+        << "COUNT 1 1 1 1 1 1" << endl
+        << "WIDTH " << m_list.size() << endl
+        << "HEIGHT 1" << endl
+        << "VIEWPOINT 0 0 0 1 0 0 0" << endl
+        << "POINTS " << m_list.size() << endl
+        << "DATA ascii" << endl;
+    for (size_t i = 0; i < m_list.size(); i++) {
+      Particle p(m_list[i]);
+      out << p.position()[0] << " " << p.position()[1] << " " << p.position()[2]
+          << " " << p.incomeDirection()[0] << " " << p.incomeDirection()[1]
+          << " " << p.incomeDirection()[2] << " ";
+      out << std::endl;
+    }
+    cout << "Particle map was saved to: " << filename << endl;
+    out.close();
+  }
+
+ private:
+  RayTracer m_rayTracer;
+  vector<Particle> m_list;
+  int m_max_depth = 20;
+
   /// Recursively emit photons
   inline int calculatePhotonPath(const Scene& scene, Ray ray, Particle photon,
                                  int depth, bool exit) {
@@ -65,6 +95,7 @@ class PhotonMap {
       m_list.push_back(photon);
       return depth - 1;
     }
+    if (depth >= m_max_depth) return -1;
 
     size_t meshIndex;
     Vec3i triangle;
@@ -110,7 +141,7 @@ class PhotonMap {
 
     // russian roulette
     // probability depends on the weight of a photon
-    float continueProb = fmin(photon.weight() * 2.f, 1.f);
+    float continueProb = fmin(photon.weight(), 1.f);
     uniform_real_distribution<float> dis(0.f, 1.f);
 
     if (dis(gen) > continueProb)
@@ -121,33 +152,5 @@ class PhotonMap {
     Ray nextRay(trianglePoint, randomDirection);
 
     return calculatePhotonPath(scene, nextRay, photon, depth + 1, exit);
-  }
-
-  /// Save constructed photon map to a .pcd file (point cloud)
-  inline void saveToPCD(const std::string& filename) {
-    std::ofstream out(filename.c_str());
-    if (!out) {
-      std::cerr << "Cannot open file " << filename.c_str() << std::endl;
-      std::exit(1);
-    }
-    out << "VERSION .7" << endl
-        << "FIELDS x y z normal_x normal_y normal_z" << endl
-        << "SIZE 4 4 4 4 4 4" << endl
-        << "TYPE F F F F F F" << endl
-        << "COUNT 1 1 1 1 1 1" << endl
-        << "WIDTH " << m_list.size() << endl
-        << "HEIGHT 1" << endl
-        << "VIEWPOINT 0 0 0 1 0 0 0" << endl
-        << "POINTS " << m_list.size() << endl
-        << "DATA ascii" << endl;
-    for (size_t i = 0; i < m_list.size(); i++) {
-      Particle p(m_list[i]);
-      out << p.position()[0] << " " << p.position()[1] << " " << p.position()[2]
-          << " " << p.incomeDirection()[0] << " " << p.incomeDirection()[1]
-          << " " << p.incomeDirection()[2] << " ";
-      out << std::endl;
-    }
-    cout << "Particle map was saved to: " << filename << endl;
-    out.close();
   }
 };

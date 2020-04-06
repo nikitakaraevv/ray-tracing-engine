@@ -1,10 +1,10 @@
 #pragma once
 #include <random>
+#include <string>
 
 #include "PhotonMap.h"
 #include "RayTracer.h"
 #include "kdtree.h"
-
 using namespace std;
 
 #define RAYTRACE 0
@@ -14,13 +14,17 @@ class Renderer {
  public:
   Renderer() {}
 
-  Renderer(int numRays, int mode, RayTracer rayTracer) {
+  Renderer(Scene& scene, int numRays, int mode, RayTracer rayTracer) {
+    m_scene = scene;
     m_numRays = numRays;
     m_mode = mode;
     m_rayTracer = rayTracer;
+    m_numPhotons = 0;
   }
 
-  Renderer(int numRays, int mode, RayTracer rayTracer, int numPhotons, int k) {
+  Renderer(Scene& scene, int numRays, int mode, RayTracer rayTracer,
+           int numPhotons, int k) {
+    m_scene = scene;
     m_numRays = numRays;
     m_mode = mode;
     m_rayTracer = rayTracer;
@@ -35,15 +39,14 @@ class Renderer {
     return w * arr[triangle[0]] + u * arr[triangle[1]] + v * arr[triangle[2]];
   }
 
-   void shade(const Scene& scene, const Ray& ray, Vec3i& triangle,
-                    size_t& meshIndex, float& u, float& v, float& d,
-                    Vec3f& hitNormal, Vec3f& trianglePoint,
-                    Vec3f& colorResponse) {
+  void shade(const Ray& ray, Vec3i& triangle, size_t& meshIndex, float& u,
+             float& v, float& d, Vec3f& hitNormal, Vec3f& trianglePoint,
+             Vec3f& colorResponse) {
     float w = 1.f - u - v;
-    const auto& mesh = scene.meshes()[meshIndex];
+    const auto& mesh = m_scene.meshes()[meshIndex];
     const auto& P = mesh.vertexPositions();
     const auto& N = mesh.vertexNormals();
-    const Camera& camera = scene.camera();
+    const Camera& camera = m_scene.camera();
     // const Vec3i& triangle = mesh.indexedTriangles()[triangleIndex];
     hitNormal = normalize(dotArr(N, triangle, w, u, v));
     trianglePoint = dotArr(P, triangle, w, u, v);
@@ -53,13 +56,13 @@ class Renderer {
     Vec3f pointCameraDirection = camera.position() - trianglePoint;
     // cout <<"start"<< endl;
 
-    for (LightSource lightSource : scene.lightsources()) {
+    for (LightSource lightSource : m_scene.lightsources()) {
       // Check that the point on the triangle is iluminated by light
       // Cast a ray from a point on the triangle to the light source
       Vec3f pointLightDirection =
           lightSource.randAreaPosition() - trianglePoint;
       Ray lightRay(trianglePoint, pointLightDirection);
-      if (m_rayTracer.rayTrace(lightRay, scene, meshIndex, triangle, u, v, d))
+      if (m_rayTracer.rayTrace(lightRay, m_scene, meshIndex, triangle, u, v, d))
         continue;
       bsdf = material.evaluateColorResponse(hitNormal, pointLightDirection,
                                             -ray.direction());
@@ -68,15 +71,14 @@ class Renderer {
     }
   }
 
-   void shade(const Scene& scene, const Ray& ray, Vec3i& triangle,
-                    size_t& meshIndex, float& u, float& v, float& d,
-                    Vec3f& hitNormal, Vec3f& trianglePoint,
-                    Vec3f& colorResponse, kdtree& particleTree) {
+  void shade(const Ray& ray, Vec3i& triangle, size_t& meshIndex, float& u,
+             float& v, float& d, Vec3f& hitNormal, Vec3f& trianglePoint,
+             Vec3f& colorResponse, kdtree& particleTree) {
     float w = 1.f - u - v;
-    const auto& mesh = scene.meshes()[meshIndex];
+    const auto& mesh = m_scene.meshes()[meshIndex];
     const auto& P = mesh.vertexPositions();
     const auto& N = mesh.vertexNormals();
-    const Camera& camera = scene.camera();
+    const Camera& camera = m_scene.camera();
     // const Vec3i& triangle = mesh.indexedTriangles()[triangleIndex];
     hitNormal = normalize(dotArr(N, triangle, w, u, v));
     trianglePoint = dotArr(P, triangle, w, u, v);
@@ -103,181 +105,181 @@ class Renderer {
 
     Vec3f averageDirection(0.f, 0.f, 0.f);
     for (Particle photon : result) {
-      averageDirection += photon.weight() * photon.incomeDirection();
-      radiance += photon.weight() * Vec3f(1.f, 1.f, 1.f);
+      averageDirection += photon.incomeDirection();  // photon.weight() *
+                                                     // photon.incomeDirection();
+      radiance +=
+          Vec3f(1.f, 1.f, 1.f);  // photon.weight() * Vec3f(1.f, 1.f, 1.f);
     }
     // cout << radiance << endl;
     radiance /= area;
-    radiance /= 7500;
+    radiance /= m_numPhotons;
+    radiance *= m_factor;
     bsdf = material.evaluateColorResponse(
         hitNormal, normalize(averageDirection), -ray.direction());
     colorResponse += radiance * bsdf;
   }
 
-   Vec3f calculateColorRay(const Scene& scene, Ray ray,
-                                 bool& posIntersectionFound) {
+  Vec3f calculateColorRay(Ray ray, bool& posIntersectionFound) {
     size_t meshIndex;
     Vec3i triangle;
     Vec3f colorResponse(0.f, 0.f, 0.f), hitNormal, trianglePoint;
 
     float u, v, d;
     bool intersectionFound =
-        m_rayTracer.rayTrace(ray, scene, meshIndex, triangle, u, v, d);
+        m_rayTracer.rayTrace(ray, m_scene, meshIndex, triangle, u, v, d);
 
     if (not(intersectionFound && d > 0.f)) {
       posIntersectionFound = false;
       return colorResponse;
     }
-    shade(scene, ray, triangle, meshIndex, u, v, d, hitNormal, trianglePoint,
+    shade(ray, triangle, meshIndex, u, v, d, hitNormal, trianglePoint,
           colorResponse);
     return colorResponse;
   }
 
-   Vec3f calculateColorRay(const Scene& scene, Ray ray,
-                                 bool& posIntersectionFound,
-                                 kdtree& particleTree) {
+  Vec3f calculateColorRay(Ray ray, bool& posIntersectionFound,
+                          kdtree& particleTree) {
     size_t meshIndex;
     Vec3i triangle;
     Vec3f colorResponse(0.f, 0.f, 0.f), hitNormal, trianglePoint;
 
     float u, v, d;
     bool intersectionFound =
-        m_rayTracer.rayTrace(ray, scene, meshIndex, triangle, u, v, d);
+        m_rayTracer.rayTrace(ray, m_scene, meshIndex, triangle, u, v, d);
 
     if (not(intersectionFound && d > 0.f)) {
       posIntersectionFound = false;
       return colorResponse;
     }
-    shade(scene, ray, triangle, meshIndex, u, v, d, hitNormal, trianglePoint,
+    shade(ray, triangle, meshIndex, u, v, d, hitNormal, trianglePoint,
           colorResponse, particleTree);
     return colorResponse;
   }
 
-   Vec3f calculateColorPath(const Scene& scene, Ray ray,
-                                  bool& posIntersectionFound, int depth,
-                                  const int finalDepth) {
+  Vec3f calculateColorPath(Ray ray, bool& posIntersectionFound, int depth,
+                           const int finalDepth) {
     size_t meshIndex;
     Vec3i triangle;
     Vec3f colorResponse(0.f, 0.f, 0.f), hitNormal, trianglePoint;
-    if (depth >= finalDepth) return colorResponse;
+    if (depth >= finalDepth) return colorResponse / (float)depth;
 
     float u, v, d;
     bool intersectionFound =
-        m_rayTracer.rayTrace(ray, scene, meshIndex, triangle, u, v, d);
+        m_rayTracer.rayTrace(ray, m_scene, meshIndex, triangle, u, v, d);
 
     if (not(intersectionFound && d > 0.f)) {
-      if (depth == 0) posIntersectionFound = false;
+      if (depth == 0)
+        posIntersectionFound = false;
+      else
+        colorResponse /= (float)depth;
       return colorResponse;
     }
-    shade(scene, ray, triangle, meshIndex, u, v, d, hitNormal, trianglePoint,
+    shade(ray, triangle, meshIndex, u, v, d, hitNormal, trianglePoint,
           colorResponse);
 
     Vec3f randomDirection =
         m_rayTracer.hsphereUniformSample(hitNormal, M_PI / 2.f);
     Ray nextRay(trianglePoint, randomDirection);
 
-    return colorResponse + calculateColorPath(scene, nextRay,
-                                              posIntersectionFound, depth + 1,
-                                              finalDepth);
+    return colorResponse + calculateColorPath(nextRay, posIntersectionFound,
+                                              depth + 1, finalDepth);
   }
 
-   Vec3f calculateColorPath(const Scene& scene, Ray ray,
-                                  bool& posIntersectionFound, int depth,
-                                  const int finalDepth,
-                                  kdtree& particleTree) {
+  Vec3f calculateColorPath(Ray ray, bool& posIntersectionFound, int depth,
+                           const int finalDepth, kdtree& particleTree) {
     size_t meshIndex;
     Vec3i triangle;
     Vec3f colorResponse(0.f, 0.f, 0.f), hitNormal, trianglePoint;
-    if (depth >= finalDepth) return colorResponse;
+    if (depth >= finalDepth) return colorResponse / (float)depth;
 
     float u, v, d;
     bool intersectionFound =
-        m_rayTracer.rayTrace(ray, scene, meshIndex, triangle, u, v, d);
+        m_rayTracer.rayTrace(ray, m_scene, meshIndex, triangle, u, v, d);
 
     if (not(intersectionFound && d > 0.f)) {
-      if (depth == 0) posIntersectionFound = false;
+      if (depth == 0)
+        posIntersectionFound = false;
+      else
+        colorResponse /= (float)depth;
       return colorResponse;
     }
-    shade(scene, ray, triangle, meshIndex, u, v, d, hitNormal, trianglePoint,
+    shade(ray, triangle, meshIndex, u, v, d, hitNormal, trianglePoint,
           colorResponse, particleTree);
 
     Vec3f randomDirection =
         m_rayTracer.hsphereUniformSample(hitNormal, M_PI / 2.f);
     Ray nextRay(trianglePoint, randomDirection);
 
-    return colorResponse +
-           calculateColorPath(scene, nextRay, posIntersectionFound, depth + 1,
-                              finalDepth, particleTree);
+    return colorResponse + calculateColorPath(nextRay, posIntersectionFound,
+                                              depth + 1, finalDepth,
+                                              particleTree);
   }
 
-  void render(const Scene& scene, Image& image) {
+  void render(Image& image) {
     size_t w = image.width();
     size_t h = image.height();
-    const Camera& camera = scene.camera();
+    const Camera& camera = m_scene.camera();
     // photon map test
-    Image updateImage(w, h), saveImage(w,h);
-    PhotonMap m_photonMap(scene, m_numPhotons, m_rayTracer);
-    if (m_numPhotons > 0 )
-        cout << "Constructing a kd-tree for the photon map." << endl;
+    Image updateImage(w, h), saveImage(w, h);
+    PhotonMap m_photonMap(m_scene, m_numPhotons, m_rayTracer);
+    m_photonMap.saveToPCD("pointcloud.pcd");
+    if (m_numPhotons > 0)
+      cout << "Constructing a kd-tree for the photon map." << endl;
     kdtree photonTree(m_photonMap.list().begin(), m_photonMap.list().end());
-    
+
     vector<vector<int> > counter(w, vector<int>(h));
-    
+
     uniform_real_distribution<float> dis(0.f, 1.f);
-    for (int i = 0; i < m_numRays; i++)
-       {
+    for (int i = 0; i < m_numRays; i++) {
 #pragma omp parallel for
-        for (int y = 0; y < h; y++)
-       {
-           printProgressBar((i*h+(float)(y + 1) )/ ((float)h*m_numRays));
-           
+      for (int y = 0; y < h; y++) {
+        printProgressBar((i * h + (float)(y + 1)) / ((float)h * m_numRays));
+
 #pragma omp parallel for
-        for (int x = 0; x < w; x++)
-         {
+        for (int x = 0; x < w; x++) {
           Vec3f colorResponse(0.f, 0.f, 0.f);
           Vec3f noise = m_rayTracer.jitterSample(i, m_numRays);
+
           float shiftX = noise[0];
           float shiftY = noise[1];
-          Ray ray = camera.rayAt((x + shiftX) / w, 1.f - (y + shiftY) / h);
+          Ray ray = camera.rayAt((x + shiftX) / (float)w,
+                                 1.f - (y + shiftY) / (float)h);
           bool posIntersectionFound = true;
           Vec3f color(0.f, 0.f, 0.f);
           switch (m_mode) {
             case RAYTRACE:
               if (not photonTree.empty())
-                color = calculateColorRay(scene, ray, posIntersectionFound,
-                                          photonTree);
+                color =
+                    calculateColorRay(ray, posIntersectionFound, photonTree);
               else
-                color = calculateColorRay(scene, ray, posIntersectionFound);
+                color = calculateColorRay(ray, posIntersectionFound);
               break;
             case PATHTRACE:
               if (not photonTree.empty())
-                color = calculateColorPath(
-                    scene, ray, posIntersectionFound, 0, 3,
-                    photonTree);
+                color = calculateColorPath(ray, posIntersectionFound, 0, 3,
+                                           photonTree);
               else
-                color = calculateColorPath(
-                                           scene, ray, posIntersectionFound, 0, 3);
+                color = calculateColorPath(ray, posIntersectionFound, 0, 3);
               break;
             default:
               break;
           }
           colorResponse = normalizeColor(color);
-            if (posIntersectionFound) {
-                counter[x][y]++;
-                
-            }
-            updateImage(x, y) += colorResponse;
-    
-            
+          if (posIntersectionFound) {
+            counter[x][y]++;
+          }
+          updateImage(x, y) += colorResponse;
         }
-    }
+      }
       // Save an updated image after each iteration
       for (int y = 0; y < h; y++)
-           for (int x = 0; x < w; x++)
-               saveImage(x, y) = (updateImage(x, y) / float(i+1)) + image(x, y) * (i+1 - counter[x][y])/ float(i+1);
-           
-      saveImage.savePPM("update.ppm");
-           
+        for (int x = 0; x < w; x++)
+          saveImage(x, y) =
+              (updateImage(x, y) / float(i + 1)) +
+              image(x, y) * (i + 1 - counter[x][y]) / float(i + 1);
+      std::string saveName = "photonmapPathtrace/update_";
+      saveName += to_string(i) + ".ppm";
+      saveImage.savePPM(saveName);
     }
     image = saveImage;
   }
@@ -286,6 +288,8 @@ class Renderer {
   int m_numRays, m_mode, m_numPhotons, m_k;
   PhotonMap m_photonMap, m_importonMap;
   RayTracer m_rayTracer;
+  Scene m_scene;
+  float m_factor = 100.f;
 
   inline Vec3f normalizeColor(Vec3f colorResponse) {
     for (int i = 0; i < 3; i++)
