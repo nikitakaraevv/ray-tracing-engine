@@ -35,7 +35,10 @@ class CommandLine {
         << "USAGE: " << command
         << " [-w/-width <image width>][-h/-height <image height>][-o/-output "
            "<outputfilename>][-N/-n/-numRays <number of rays per "
-           "pixel>][-m/-mode <mode (0 for Ray tracing, 1 for Path tracing)>][-p/-numPhotons <number of photons for a photon map. If defined, photon map-based rendering is used.>][-k <number of neighbours in photon mapping. Use only with -p/-numPhotons>]"
+           "pixel>][-m/-mode <mode (0 for Ray tracing, 1 for Path "
+           "tracing)>][-p/-numPhotons <number of photons for a photon map. If "
+           "defined, photon map-based rendering is used.>][-k <number of "
+           "neighbours in photon mapping. Use only with -p/-numPhotons>]"
         << std::endl;
   }
 
