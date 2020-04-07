@@ -1,6 +1,7 @@
 # Ray tracing engine
 A C++ based renderer developed from scratch. It utilizes either ray tracing or path tracing to render a scene.  The renderer supports global illumination, [microfacet reflections](http://www.pbr-book.org/3ed-2018/Reflection_Models/Microfacet_Models.html), shadows, and area lights. Rendering can be done either with or without construction of a [photon map](https://en.wikipedia.org/wiki/Photon_mapping).
-Most of the theory from the [Image Synthesis course](http://www.enseignement.polytechnique.fr/informatique/INF584/) and [Physically Based Rendering book](http://www.pbr-book.org)
+
+Most of the theory from the [Image Synthesis course](http://www.enseignement.polytechnique.fr/informatique/INF584/) and the [Physically Based Rendering book](http://www.pbr-book.org).
 
 ## Examples
 Ray Tracing                |   Path Tracing      
