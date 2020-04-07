@@ -1,6 +1,15 @@
 # Ray tracing engine
-A C++ based renderer which utilizes ray tracing or path tracing to render a scene.  The renderer supports global illumination, reflections, soft shadows, and area lights. Rendering can be done either with or without construction of a photon map.
+A C++ based renderer developed from scratch. It utilizes either ray tracing or path tracing to render a scene.  The renderer supports global illumination, reflections, soft shadows, and area lights. Rendering can be done either with or without construction of a [photon map](https://en.wikipedia.org/wiki/Photon_mapping).
 
+
+## Examples
+Ray Tracing                |   Path Tracing      
+:-------------------------:|:-------------------------:
+![](gifs/ray_trace.gif)    |  ![](gifs/path_trace.gif) 
+
+Ray tracing with Photon Mapping   |  Path tracing  with Photon Mapping  
+:-------------------------:|:-------------------------:
+![](gifs/ph_map_ray_trace.gif) |  ![](gifs/ph_map_path_trace.gif)
 
 ## Usage
 
@@ -26,15 +35,6 @@ Here is a typical running command and some comments:
   + If `-p` is used, renderer will create a photon map and use it to render the image. `-k` indicates number of nearest photons to be considered during rendering.
   + In addition the renderer saves intermediate results to `update.ppm`.
  
-
-## Examples
-Ray Tracing                |   Path Tracing      
-:-------------------------:|:-------------------------:
-![](gifs/ray_trace.gif)    |  ![](gifs/path_trace.gif) 
-
-Ray tracing with Photon Mapping   |  Path tracing  with Photon Mapping  
-:-------------------------:|:-------------------------:
-![](gifs/ph_map_ray_trace.gif) |  ![](gifs/ph_map_path_trace.gif)
 
 ## Author
 [Nikita Karaev](https://github.com/nikitakaraevv)
